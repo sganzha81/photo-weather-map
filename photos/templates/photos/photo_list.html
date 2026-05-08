@@ -4,44 +4,62 @@
     <meta charset="utf-8">
     <title>Карта фотографий</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Подключаем стили Leaflet (CSS) через CDN -->
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin=""/>
-    <!-- Подключаем JavaScript Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
     <style>
-        /* Стили для карты: она займёт весь экран */
-        body {
-            margin: 0;
-            padding: 0;
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; width: 100%; }
+
+        /* Стили для кастомного маркера */
+        .weather-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 12px;
+            padding: 4px 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.2;
+            text-align: center;
+            min-width: 50px;
+            min-height: 50px;
+            border: 2px solid #ddd;
+            transition: transform 0.2s;
+            cursor: pointer;
         }
-        #map {
-            height: 100vh;   /* 100% высоты окна браузера */
-            width: 100%;
+        .weather-marker:hover {
+            transform: scale(1.1);
+            border-color: #4a90e2;
+        }
+        .weather-emoji {
+            font-size: 22px;
+            margin-bottom: 2px;
+        }
+        .weather-temp {
+            font-weight: bold;
+            font-size: 13px;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <!-- Контейнер для карты -->
     <div id="map"></div>
-
-    <!-- Сюда Django подставит данные в формате JSON -->
     {{ photos_json|json_script:"photos-data" }}
 
     <script>
-        // Инициализация карты
-        var map = L.map('map').setView([55.75, 37.62], 4);  // центр — Москва, масштаб 4
-
-        // Добавляем слой тайлов (подложку карты) от OpenStreetMap
+        var map = L.map('map').setView([55.75, 37.62], 4);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Читаем данные, переданные из Django
         var photosDataElement = document.getElementById('photos-data');
         if (photosDataElement) {
             try {
@@ -50,7 +68,18 @@
                     var lat = photo.latitude;
                     var lon = photo.longitude;
                     if (lat !== null && lon !== null) {
-                        var marker = L.marker([lat, lon]).addTo(map);
+                        // Строим HTML для маркера
+                        var markerHtml = '<div class="weather-marker">' +
+                                         '<div class="weather-emoji">' + (photo.icon_desc || '📷') + '</div>' +
+                                         '<div class="weather-temp">' + (photo.temp_str || '') + '</div>' +
+                                         '</div>';
+                        var icon = L.divIcon({
+                            className: '',
+                            html: markerHtml,
+                            iconSize: [70, 70],
+                            iconAnchor: [35, 35]
+                        });
+                        var marker = L.marker([lat, lon], { icon: icon }).addTo(map);
                         marker.bindPopup("<b>Фото " + photo.id + "</b><br><img src='" + photo.image_url + "' width='150'>");
                     }
                 });
