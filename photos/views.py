@@ -1,6 +1,22 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from .models import Photo
+
+
+def upload_photo(request):
+    if request.method == "POST":
+        image_file = request.FILES.get("image")
+        if image_file:
+            # Создаём объект Photo; clean() и save() вызовут EXIF-парсинг и запрос погоды
+            photo = Photo(image=image_file)
+            photo.save()
+            messages.success(request, "Фото загружено! Погода добавлена.")
+            return redirect("photo_list")  # после загрузки – на карту
+        else:
+            messages.error(request, "Пожалуйста, выберите файл.")
+    # GET-запрос или ошибка – показываем форму
+    return render(request, "photos/upload.html")
 
 
 def get_weather_emoji(weathercode):
