@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Карта фотографий</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Подключаем стили Leaflet (CSS) через CDN -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <!-- Подключаем JavaScript Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <style>
+        /* Стили для карты: она займёт весь экран */
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100vh;   /* 100% высоты окна браузера */
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Контейнер для карты -->
+    <div id="map"></div>
+
+    <!-- Сюда Django подставит данные в формате JSON -->
+    {{ photos_json|json_script:"photos-data" }}
+
+    <script>
+        // Инициализация карты
+        var map = L.map('map').setView([55.75, 37.62], 4);  // центр — Москва, масштаб 4
+
+        // Добавляем слой тайлов (подложку карты) от OpenStreetMap
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        }).addTo(map);
+
+        // Читаем данные, переданные из Django
+        var photosDataElement = document.getElementById('photos-data');
+        if (photosDataElement) {
+            try {
+                var photos = JSON.parse(photosDataElement.textContent);
+                photos.forEach(function(photo) {
+                    var lat = photo.latitude;
+                    var lon = photo.longitude;
+                    if (lat !== null && lon !== null) {
+                        var marker = L.marker([lat, lon]).addTo(map);
+                        marker.bindPopup("<b>Фото " + photo.id + "</b><br><img src='" + photo.image_url + "' width='150'>");
+                    }
+                });
+            } catch (e) {
+                console.error("Ошибка при разборе данных:", e);
+            }
+        }
+    </script>
+</body>
+</html>
