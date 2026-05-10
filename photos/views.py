@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 
 from .models import Photo
 
@@ -12,16 +13,37 @@ from .models import Photo
 @login_required
 def upload_photo(request):
     if request.method == "POST":
-        image_files = request.FILES.getlist("image")  # теперь список файлов
-        if image_files:
-            for image_file in image_files:
-                photo = Photo(image=image_file)
-                photo.user = request.user
-                photo.save()
-            messages.success(request, f"Загружено {len(image_files)} фото.")
-            return redirect("photo_list")
-        else:
+        image_files = request.FILES.getlist("image")
+        if not image_files:
             messages.error(request, "Пожалуйста, выберите хотя бы один файл.")
+            return render(request, "photos/upload.html")
+
+        success_count = 0
+        has_errors = False
+        for image_file in image_files:
+            photo = Photo(image=image_file)
+            photo.user = request.user
+            try:
+                photo.full_clean()  # запускает все валидаторы модели
+                photo.save()
+                success_count += 1
+            except ValidationError as e:
+                has_errors = True
+                for field, errors in e.message_dict.items():
+                    for error in errors:
+                        messages.error(
+                            request, f"Ошибка в файле «{image_file.name}»: {error}"
+                        )
+
+        if success_count:
+            messages.success(request, f"Загружено {success_count} фото.")
+        if has_errors:
+            # Если были ошибки, остаёмся на странице загрузки, чтобы пользователь увидел сообщения
+            return render(request, "photos/upload.html")
+        else:
+            # Всё хорошо — идём на карту
+            return redirect("photo_list")
+
     return render(request, "photos/upload.html")
 
 
