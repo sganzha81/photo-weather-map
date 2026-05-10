@@ -6,6 +6,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator
 
 from .weather import fetch_weather_for_photo
 
@@ -65,7 +66,10 @@ def extract_datetime(exif_data):
 
 
 class Photo(models.Model):
-    image = models.ImageField(upload_to="photos/%Y/%m/")
+    image = models.ImageField(
+        upload_to="photos/%Y/%m/",
+        validators=[MaxValueValidator(10 * 1024 * 1024)],  # не больше 10 МБ
+    )
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     taken_at = models.DateTimeField(null=True, blank=True)
