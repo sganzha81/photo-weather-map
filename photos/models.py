@@ -6,9 +6,17 @@ from PIL.ExifTags import TAGS, GPSTAGS
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MaxValueValidator
+from django.core.exceptions import ValidationError
 
 from .weather import fetch_weather_for_photo
+
+
+def validate_image_size(image):
+    max_size_mb = 10
+    if image.size > max_size_mb * 1024 * 1024:
+        raise ValidationError(
+            f"Файл слишком большой! Максимальный размер: {max_size_mb} МБ."
+        )
 
 
 def get_exif_data(image):
@@ -67,8 +75,7 @@ def extract_datetime(exif_data):
 
 class Photo(models.Model):
     image = models.ImageField(
-        upload_to="photos/%Y/%m/",
-        validators=[MaxValueValidator(10 * 1024 * 1024)],  # не больше 10 МБ
+        upload_to="photos/%Y/%m/", validators=[validate_image_size]
     )
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
