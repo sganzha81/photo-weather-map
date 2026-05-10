@@ -1,8 +1,12 @@
 import json
 from datetime import datetime
+
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
+
 from django.db import models
+from django.contrib.auth.models import User
+
 from .weather import fetch_weather_for_photo
 
 
@@ -66,6 +70,13 @@ class Photo(models.Model):
     longitude = models.FloatField(null=True, blank=True)
     taken_at = models.DateTimeField(null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name="Пользователь",
+    )
     weather_data = models.JSONField(null=True, blank=True)
     exif_raw = models.JSONField(null=True, blank=True)
 

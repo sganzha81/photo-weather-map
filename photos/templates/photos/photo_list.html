@@ -4,10 +4,12 @@
     <meta charset="utf-8">
     <title>Карта фотографий</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Leaflet CSS -->
     <link rel="stylesheet"
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin=""/>
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
@@ -15,79 +17,170 @@
         body { margin: 0; padding: 0; }
         #map { height: 100vh; width: 100%; }
 
-        /* Стили для кастомного маркера */
-        .weather-marker {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 12px;
-            padding: 4px 6px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        /* Кнопка "Загрузить фото" */
+        .upload-btn {
+            position: absolute;
+            top: 10px;
+            left: 80px;      /* чтобы не наезжала на кнопки зума */
+            z-index: 1000;
+            background: #4a90e2;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
             font-family: Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.2;
-            text-align: center;
-            min-width: 50px;
-            min-height: 50px;
-            border: 2px solid #ddd;
-            transition: transform 0.2s;
-            cursor: pointer;
         }
-        .weather-marker:hover {
-            transform: scale(1.1);
-            border-color: #4a90e2;
+        .upload-btn:hover {
+            background: #357abd;
         }
-        .weather-emoji {
-            font-size: 22px;
-            margin-bottom: 2px;
+
+        /* Стили внутри всплывающего окна */
+        .popup-content {
+            min-width: 200px;
+            font-family: Arial, sans-serif;
         }
-        .weather-temp {
-            font-weight: bold;
-            font-size: 13px;
-            color: #333;
+        .popup-content img {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        .place-info {
+            font-style: italic;
+            color: #555;
         }
     </style>
 </head>
 <body>
-    <a href="{% url 'upload_photo' %}"
-        style="position: absolute; top: 10px; left: 80px; z-index: 1000;
-          background: #4a90e2; color: white; padding: 10px 15px;
-          border-radius: 8px; text-decoration: none; font-family: Arial;">
-        📤 Загрузить фото
+ {% if user.is_authenticated %}
+    <span style="position: absolute; top: 10px; right: 120px; z-index: 1000; background: white; padding: 6px 12px; border-radius: 8px; font-family: Arial;">
+        {{ user.username }}
+    </span>
+    <a href="{% url 'logout' %}" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #eee; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-family: Arial;">
+        Выйти
     </a>
-    
+    <a href="{% url 'upload_photo' %}" class="upload-btn">📤 Загрузить фото</a>
+{% else %}
+    <a href="{% url 'login' %}" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #4a90e2; color: white; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-family: Arial;">
+        Войти
+    </a>
+{% endif %}
+
     <div id="map"></div>
+
+ 
+    <!-- Блок с данными для JavaScript -->
     {{ photos_json|json_script:"photos-data" }}
 
     <script>
+        // Функция для получения CSRF-токена из cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+        // Настраиваем все fetch-запросы, чтобы они включали CSRF-токен
+        const csrftoken = getCookie('csrftoken');
+
+        async function deletePhoto(photoId, buttonElement) {
+            if (!confirm('Вы уверены, что хотите удалить это фото?')) return;
+            try {
+                const response = await fetch(`/photos/delete/${photoId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (response.ok && data.status === 'ok') {
+                    // Закрыть popup
+                    const popup = buttonElement.closest('.leaflet-popup');
+                    if (popup) popup.remove();
+                    // Удалить маркер с карты
+                    map.eachLayer(function(layer) {
+                        if (layer instanceof L.Marker && layer.getPopup() && layer.getPopup().getContent().includes(photoId)) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось удалить фото'));
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Сетевая ошибка при удалении');
+            }
+        }
+
+        // Инициализация карты
         var map = L.map('map').setView([55.75, 37.62], 4);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
+        // Забираем данные из скрытого элемента
         var photosDataElement = document.getElementById('photos-data');
         if (photosDataElement) {
             try {
                 var photos = JSON.parse(photosDataElement.textContent);
                 photos.forEach(function(photo) {
-                    var lat = photo.latitude;
-                    var lon = photo.longitude;
-                    if (lat !== null && lon !== null) {
-                        // Строим HTML для маркера
-                        var markerHtml = '<div class="weather-marker">' +
-                                         '<div class="weather-emoji">' + (photo.icon_desc || '📷') + '</div>' +
-                                         '<div class="weather-temp">' + (photo.temp_str || '') + '</div>' +
-                                         '</div>';
-                        var icon = L.divIcon({
-                            className: '',
-                            html: markerHtml,
-                            iconSize: [70, 70],
-                            iconAnchor: [35, 35]
+                    if (photo.latitude !== null && photo.longitude !== null) {
+                        // Создаём обычный маркер (синий пин)
+                        var marker = L.marker([photo.latitude, photo.longitude]).addTo(map);
+
+                        // Содержимое всплывающего окна (пока без места)
+                        var popupHtml = `
+                            <div class="popup-content">
+                                <b>${photo.date}</b><br>
+                                <img src="${photo.image_url}" alt="Фото">
+                                <div class="weather-info">${photo.weather}</div>
+                                <div class="place-info" id="place-${photo.id}">Загрузка места...</div>
+                                <button onclick="deletePhoto(${photo.id}, this)" style="margin-top:8px; background:#ff4d4d; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        `;                       
+                        var popup = L.popup().setContent(popupHtml);
+                        marker.bindPopup(popup);
+
+                        // При открытии попапа запрашиваем место через Nominatim
+                        marker.on('popupopen', function(e) {
+                            var placeSpan = document.getElementById('place-' + photo.id);
+                            if (!placeSpan) return;
+                            // Если уже загружено, не повторяем запрос
+                            if (placeSpan.dataset.loaded === 'true') return;
+
+                            fetch(`/photos/place/?lat=${photo.latitude}&lon=${photo.longitude}`)
+                                .then(function(response) { return response.json(); })
+                                .then(function(data) {
+                                    if (data.error) {
+                                        placeSpan.textContent = 'Место не определено';
+                                    } else {
+                                        // Берём короткое имя (первую часть display_name)
+                                        var shortName = data.name || data.display_name;
+                                        if (data.display_name && data.display_name.includes(',')) {
+                                            shortName = data.display_name.split(',')[0].trim();
+                                        }
+                                        placeSpan.textContent = '📍 ' + shortName;
+                                        placeSpan.dataset.loaded = 'true';
+                                    }
+                                })
+                                .catch(function(err) {
+                                    placeSpan.textContent = 'Ошибка загрузки места';
+                                    console.error(err);
+                                });
                         });
-                        var marker = L.marker([lat, lon], { icon: icon }).addTo(map);
-                        marker.bindPopup("<b>Фото " + photo.id + "</b><br><img src='" + photo.image_url + "' width='150'>");
                     }
                 });
             } catch (e) {
