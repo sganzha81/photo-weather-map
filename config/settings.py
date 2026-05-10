@@ -10,23 +10,35 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def get_bool_env(var_name, default=False):
+    return os.environ.get(var_name, str(default)).lower() in ("true", "1", "yes")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-g(dvn$!1*ti0vh1@r*sfs+jqk590q5@m=@qcn3_#q&z15ghf(x"
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-g(dvn$!1*ti0vh1@r*sfs+jqk590q5@m=@qcn3_#q&z15ghf(x",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = get_bool_env("DJANGO_DEBUG", True)  # локально по умолчанию True
 
-ALLOWED_HOSTS = []
-
+allowed_hosts_env = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
+if allowed_hosts_env:
+    ALLOWED_HOSTS = allowed_hosts_env.split(",")
+else:
+    ALLOWED_HOSTS = []  # локально пустой список (разрешает localhost)
 
 # Application definition
 
@@ -118,6 +130,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
