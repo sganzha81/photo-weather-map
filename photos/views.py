@@ -1,4 +1,3 @@
-import json
 import requests
 
 from django.contrib import messages
@@ -81,48 +80,8 @@ def get_weather_emoji(weathercode):
 
 @login_required
 def photo_list(request):
-    photos = Photo.objects.filter(user=request.user)
-
-    photos_data = []
-    for photo in photos:
-        w = photo.weather_data or {}
-        temp_max = w.get("temperature_max")
-        temp_min = w.get("temperature_min")
-        precip = w.get("precipitation")
-        weathercode = w.get("weathercode")
-        # Получаем эмодзи + описание по коду погоды
-        weather_emoji = (
-            get_weather_emoji(weathercode) if weathercode is not None else ""
-        )
-
-        weather_parts = []
-        if weather_emoji:
-            weather_parts.append(weather_emoji)  # эмодзи идёт первым
-        if temp_max is not None:
-            weather_parts.append(f"Макс {temp_max}°C")
-        if temp_min is not None:
-            weather_parts.append(f"Мин {temp_min}°C")
-        if precip is not None and precip > 0:
-            weather_parts.append(f"Осадки {precip} мм")
-        weather_str = " · ".join(weather_parts) if weather_parts else "Нет данных"
-
-        # дата съёмки
-        taken = photo.taken_at or photo.uploaded_at
-        date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
-        photos_data.append(
-            {
-                "id": photo.id,
-                "latitude": photo.latitude,
-                "longitude": photo.longitude,
-                "image_url": photo.image.url if photo.image else "",
-                "date": date_str,
-                "weather": weather_str,
-                "weathercode": weathercode,
-            }
-        )
-
-    return render(request, "photos/photo_list.html", {"photos_json": photos_data})
-
+    # Вся логика по сбору данных теперь в photos_geojson, а здесь просто рендерим шаблон
+    return render(request, 'photos/photo_list.html')
 
 def get_place_name(request):
     lat = request.GET.get("lat")
@@ -151,6 +110,57 @@ def get_place_name(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
+def photos_geojson(request):
+    """Возвращает все фото текущего пользователя в формате GeoJSON."""
+    photos = Photo.objects.filter(user=request.user)
+
+    features = []
+    for photo in photos:
+        if photo.latitude is None or photo.longitude is None:
+            continue
+
+        w = photo.weather_data or {}
+        temp_max = w.get('temperature_max')
+        temp_min = w.get('temperature_min')
+        precip = w.get('precipitation')
+        weathercode = w.get('weathercode')
+
+        weather_parts = []
+        weather_emoji = get_weather_emoji(weathercode) if weathercode is not None else ""
+        if weather_emoji:
+            weather_parts.append(weather_emoji)
+        if temp_max is not None:
+            weather_parts.append(f"Макс {temp_max}°C")
+        if temp_min is not None:
+            weather_parts.append(f"Мин {temp_min}°C")
+        if precip is not None and precip > 0:
+            weather_parts.append(f"Осадки {precip} мм")
+        weather_str = " · ".join(weather_parts) if weather_parts else "Нет данных"
+
+        taken = photo.taken_at or photo.uploaded_at
+        date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
+
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [photo.longitude, photo.latitude]  # Внимание: долгота, широта!
+            },
+            "properties": {
+                "id": photo.id,
+                "date": date_str,
+                "weather": weather_str,
+                "image_url": photo.image.url if photo.image else "",
+            }
+        }
+        features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    return JsonResponse(geojson)
 
 @login_required
 def delete_photo(request, photo_id):
