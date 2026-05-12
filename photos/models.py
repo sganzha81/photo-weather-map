@@ -1,4 +1,7 @@
 import json
+import io
+import hashlib
+
 from datetime import datetime
 
 from PIL import Image
@@ -8,7 +11,12 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
+import pillow_heif
+
 from .weather import fetch_weather_for_photo
+
+pillow_heif.register_heif_opener()
+
 
 
 def validate_image_size(image):
@@ -77,6 +85,8 @@ class Photo(models.Model):
     image = models.ImageField(
         upload_to="photos/%Y/%m/", validators=[validate_image_size]
     )
+    file_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name='Хэш файла')
+    pixel_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name='Хэш пикселей')
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     taken_at = models.DateTimeField(null=True, blank=True)
@@ -92,13 +102,18 @@ class Photo(models.Model):
     exif_raw = models.JSONField(null=True, blank=True)
 
     def clean(self):
-        """При сохранении попытаемся извлечь EXIF, но только у новых фото."""
         if self.image and not self.pk:
             try:
-                img = Image.open(self.image)
+                # Читаем все байты загруженного файла для побайтового хэша
+                self.image.seek(0)
+                file_bytes = self.image.read()
+                self.file_hash = hashlib.sha256(file_bytes).hexdigest()
+            
+                # Открываем изображение через Pillow
+                img = Image.open(io.BytesIO(file_bytes))
+            
+                # EXIF-парсинг (твоя неизменная логика)
                 exif = get_exif_data(img)
-
-                # Сохраним все читаемые поля как JSON
                 serializable = {}
                 for k, v in exif.items():
                     if isinstance(v, bytes):
@@ -118,19 +133,26 @@ class Photo(models.Model):
                 taken = extract_datetime(exif)
                 if taken:
                     self.taken_at = taken
-                if (
-                    self.latitude is not None
-                    and self.longitude is not None
-                    and self.taken_at is not None
-                ):
-                    weather = fetch_weather_for_photo(
-                        self.latitude, self.longitude, self.taken_at
-                    )
-                    if weather:
-                        self.weather_data = weather
+
+                # Пиксельный хэш (визуальный)
+                with io.BytesIO() as output:
+                    img.save(output, format='BMP')
+                    pixel_bytes = output.getvalue()
+                self.pixel_hash = hashlib.sha256(pixel_bytes).hexdigest()
+
+                # Проверка на дубликат для этого пользователя
+                if self.user and self.pixel_hash:
+                    exists = Photo.objects.filter(
+                        user=self.user,
+                        pixel_hash=self.pixel_hash
+                    ).exclude(pk=self.pk).exists()
+                    if exists:
+                        raise ValidationError('Вы уже загружали такое фото (визуально идентичное).')
+
+            except ValidationError:
+                raise  # наша ошибка пробрасывается наружу
             except Exception:
-                # Если не получилось – не страшно, фото сохранится без EXIF
-                pass
+                pass  # другие ошибки не прерывают сохранение
 
     def save(self, *args, **kwargs):
         self.clean()
