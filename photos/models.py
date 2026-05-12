@@ -142,3 +142,11 @@ class Photo(models.Model):
             f"({self.latitude}, {self.longitude})" if self.latitude else "без координат"
         )
         return f"Photo {self.id} {dt} {coords}"
+    
+    def delete(self, *args, **kwargs):
+        # Удаляем файл изображения с диска, если он есть
+        if self.image:
+            storage, path = self.image.storage, self.image.name
+            storage.delete(path)
+        # Затем вызываем стандартное удаление, чтобы запись исчезла из БД
+        super().delete(*args, **kwargs)
