@@ -107,14 +107,62 @@
         .popup-close-btn:hover {
         background: #e0e0e0;
         }
+        .message-success {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+        .message-error {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+        .message-warning {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background-color: #fff3e0;
+            color: #e65100;
+        }
     </style>
 </head>
 <body>
+
+    {% if messages %}
+  <ul style="list-style: none; padding: 0; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 300px;">
+    {% for message in messages %}
+      <li class="
+          {% if 'error' in message.tags %}message-error
+          {% elif 'warning' in message.tags %}message-warning
+          {% elif 'success' in message.tags %}message-success
+          {% endif %}
+      ">
+        {{ message }}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
 
     <div id="map"></div>
 
     <!-- Кнопка Загрузить фото (только для авторизованных) -->
     {% if user.is_authenticated %}
+        <a href="{% url 'user_photos' %}" style="
+            position: absolute;
+            top: 10px;
+            left: 220px;   /* или подбери позицию */
+            z-index: 1000;
+            background: #4caf50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+        ">📁 Мои фото</a>
         <a href="{% url 'upload_photo' %}" class="upload-btn">📤 Загрузить фото</a>
         <div class="user-bar">
             <span>{{ user.username }}</span>

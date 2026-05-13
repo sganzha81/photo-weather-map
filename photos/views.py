@@ -23,16 +23,18 @@ def upload_photo(request):
             photo = Photo(image=image_file)
             photo.user = request.user
             try:
-                photo.full_clean()  # запускает все валидаторы модели
+                photo.full_clean()
                 photo.save()
+                if photo.latitude is None or photo.longitude is None:
+                    messages.warning(request, f'{image_file.name} загружен, но не отображается на карте (нет геоданных).')
+                else:
+                    messages.success(request, f'{image_file.name} загружен.')
                 success_count += 1
             except ValidationError as e:
                 has_errors = True
                 for field, errors in e.message_dict.items():
                     for error in errors:
-                        messages.error(
-                            request, f"Ошибка в файле «{image_file.name}»: {error}"
-                        )
+                        messages.error(request, f'Ошибка в файле «{image_file.name}»: {error}')
 
         if success_count:
             messages.success(request, f"Загружено {success_count} фото.")
@@ -165,13 +167,32 @@ def photos_geojson(request):
 @login_required
 def delete_photo(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id)
-    # Проверяем, что пользователь – владелец фото
+    
+    # Проверка, что пользователь — владелец
     if photo.user != request.user:
-        return JsonResponse(
-            {"error": "У вас нет прав на удаление этого фото"}, status=403
-        )
-    if request.method == "POST":
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'У вас нет прав на удаление этого фото'}, status=403)
+        else:
+            messages.error(request, 'У вас нет прав на удаление этого фото.')
+            return redirect('user_photos')
+    
+    if request.method == 'POST':
         photo.delete()
-        return JsonResponse({"status": "ok"})
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            # AJAX-запрос (с карты) — возвращаем JSON
+            return JsonResponse({'status': 'ok'})
+        else:
+            # Обычная форма (со страницы «Мои фото») — редиректим обратно на список
+            messages.success(request, 'Фото удалено.')
+            return redirect('user_photos')
     else:
-        return JsonResponse({"error": "Метод не разрешён"}, status=405)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Метод не разрешён'}, status=405)
+        else:
+            messages.error(request, 'Метод не разрешён.')
+            return redirect('user_photos')
+    
+@login_required
+def user_photos(request):
+    photos = Photo.objects.filter(user=request.user).order_by('-uploaded_at')
+    return render(request, 'photos/user_photos.html', {'photos': photos})
