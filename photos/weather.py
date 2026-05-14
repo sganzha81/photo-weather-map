@@ -28,9 +28,11 @@ def fetch_weather_for_photo(latitude, longitude, taken_at):
     }
 
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
+        print("Open-Meteo response:", data)
+        
         daily = data.get('daily', {})
 
         # Извлекаем значения (они приходят списками, берём первый элемент)

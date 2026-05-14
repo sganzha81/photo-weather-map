@@ -23,18 +23,20 @@ def upload_photo(request):
             photo = Photo(image=image_file)
             photo.user = request.user
             try:
-                photo.full_clean()
                 photo.save()
+
                 if photo.latitude is None or photo.longitude is None:
-                    messages.warning(request, f'{image_file.name} загружен, но не отображается на карте (нет геоданных).')
+                    messages.warning(
+                        request,
+                        f'{image_file.name} загружен, но не отображается на карте (нет геоданных).'
+                    )
                 else:
                     messages.success(request, f'{image_file.name} загружен.')
+
                 success_count += 1
             except ValidationError as e:
-                has_errors = True
-                for field, errors in e.message_dict.items():
-                    for error in errors:
-                        messages.error(request, f'Ошибка в файле «{image_file.name}»: {error}')
+                for error in e.messages:
+                    messages.error(request, f'{image_file.name}: {error}')
 
         if success_count:
             messages.success(request, f"Загружено {success_count} фото.")
