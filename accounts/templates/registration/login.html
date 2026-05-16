@@ -1,16 +1,168 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <title>Вход</title>
+    <meta charset="UTF-8">
+    <title>Вход — Weatherpins</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 460px;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 36px 32px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-title {
+            margin: 0 0 28px;
+            font-size: 42px;
+            line-height: 1.1;
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #cfcfcf;
+            border-radius: 10px;
+            font-size: 18px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.18);
+        }
+
+        .login-button {
+            width: 100%;
+            margin-top: 8px;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 12px;
+            background: #4a90e2;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .login-button:hover {
+            background: #3d7fc9;
+        }
+
+        .register-link {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .register-link a {
+            color: #4a148c;
+            font-weight: 600;
+        }
+
+        .error-box {
+            margin-bottom: 20px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #fff3f3;
+            color: #b00020;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                align-items: flex-start;
+                padding: 32px 16px;
+            }
+
+            .login-card {
+                padding: 30px 22px;
+                border-radius: 16px;
+            }
+
+            .login-title {
+                font-size: 36px;
+            }
+
+            .form-group input {
+                font-size: 18px;
+                padding: 14px;
+            }
+
+            .login-button {
+                font-size: 19px;
+                padding: 15px;
+            }
+
+            .register-link {
+                font-size: 17px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Вход</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Войти</button>
-    </form>
-    <p>Нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></p>
+    <main class="login-card">
+        <h1 class="login-title">Вход</h1>
+
+        {% if form.errors %}
+            <div class="error-box">
+                Неверное имя пользователя или пароль. Попробуйте ещё раз.
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+            </div>
+
+            <button type="submit" class="login-button">Войти</button>
+        </form>
+
+        <div class="register-link">
+            Нет аккаунта?
+            <a href="{% url 'register' %}">Зарегистрироваться</a>
+        </div>
+    </main>
 </body>
 </html>
