@@ -345,12 +345,13 @@
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({})
                 });
                 const data = await response.json();
-                if (response.ok && data.status === 'ok') {
+                if (response.ok && data.success) {
                     // Закрываем попап
                     closePopup();
                     // Удаляем фичу из источника

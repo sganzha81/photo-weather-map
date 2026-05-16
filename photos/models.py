@@ -25,6 +25,17 @@ pillow_heif.register_heif_opener()
 from fractions import Fraction
 import piexif
 
+def is_jpeg_file(file_bytes):
+    """Проверяет JPEG по сигнатуре файла."""
+    return file_bytes.startswith(b"\xff\xd8")
+
+
+def is_heif_file(file_bytes):
+    """Проверяет HEIC/HEIF по ISO BMFF ftyp brand."""
+    heif_brands = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
+    return len(file_bytes) >= 12 and file_bytes[4:8] == b"ftyp" and file_bytes[8:12] in heif_brands
+
+
 def _normalize_heic_exif_bytes(exif_bytes: bytes) -> bytes:
     """Делает EXIF-байты пригодными для piexif, добавляя 'Exif\x00\x00' если надо."""
     if not exif_bytes:
@@ -308,9 +319,12 @@ class Photo(models.Model):
                 file_bytes = self.image.read()
                 self.image.seek(0)
 
-                # --- 1. Если файл HEIC – извлекаем GPS напрямую, конвертируем только пиксели ---
                 lower_name = self.image.name.lower()
-                if lower_name.endswith(('.heic', '.heif')):
+                file_looks_like_heif = is_heif_file(file_bytes)
+                file_looks_like_jpeg = is_jpeg_file(file_bytes)
+
+                # --- 1. Если файл HEIC – извлекаем GPS напрямую, конвертируем только пиксели ---
+                if file_looks_like_heif:
                     # Извлекаем координаты из исходного HEIC
                     lat, lon, taken = extract_metadata_from_heif(file_bytes)
 
@@ -340,6 +354,10 @@ class Photo(models.Model):
                 # --- 3. Открываем изображение Pillow ---
                 img = Image.open(io.BytesIO(file_bytes))
 
+                if file_looks_like_jpeg and lower_name.endswith(('.heic', '.heif')):
+                    new_name = os.path.splitext(self.image.name)[0] + '.jpg'
+                    self.image.name = new_name
+
                 # --- 4. Пиксельный хэш ---
                 with io.BytesIO() as out:
                     img.save(out, format='BMP')
@@ -352,7 +370,7 @@ class Photo(models.Model):
                         raise ValidationError('Вы уже загружали такое фото (визуально идентичное).')
 
                 # --- 6. EXIF для не-HEIC (для JPEG и др.) ---
-                if not lower_name.endswith(('.heic', '.heif')):
+                if not file_looks_like_heif:
                     exif = get_exif_data(img, file_bytes)
                     if exif:
                         lat, lon = extract_gps(exif)
@@ -379,8 +397,8 @@ class Photo(models.Model):
 
             except ValidationError:
                 raise
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Ошибка обработки фото: {type(e).__name__}: {e}")
 
     def save(self, *args, **kwargs):
         self.clean()

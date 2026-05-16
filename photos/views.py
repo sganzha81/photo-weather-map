@@ -169,30 +169,40 @@ def photos_geojson(request):
 @login_required
 def delete_photo(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id)
-    
+
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     # Проверка, что пользователь — владелец
     if photo.user != request.user:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'error': 'У вас нет прав на удаление этого фото'}, status=403)
-        else:
-            messages.error(request, 'У вас нет прав на удаление этого фото.')
-            return redirect('user_photos')
-    
-    if request.method == 'POST':
+        if is_ajax:
+            return JsonResponse(
+                {"success": False, "error": "У вас нет прав на удаление этого фото"},
+                status=403,
+            )
+
+        messages.error(request, "У вас нет прав на удаление этого фото.")
+        return redirect("user_photos")
+
+    if request.method == "POST":
         photo.delete()
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # AJAX-запрос (с карты) — возвращаем JSON
-            return JsonResponse({'status': 'ok'})
-        else:
-            # Обычная форма (со страницы «Мои фото») — редиректим обратно на список
-            messages.success(request, 'Фото удалено.')
-            return redirect('user_photos')
-    else:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'error': 'Метод не разрешён'}, status=405)
-        else:
-            messages.error(request, 'Метод не разрешён.')
-            return redirect('user_photos')
+
+        if is_ajax:
+            return JsonResponse({
+                "success": True,
+                "photo_id": photo_id,
+            })
+
+        messages.success(request, "Фото удалено.")
+        return redirect("user_photos")
+
+    if is_ajax:
+        return JsonResponse(
+            {"success": False, "error": "Метод не разрешён"},
+            status=405,
+        )
+
+    messages.error(request, "Метод не разрешён.")
+    return redirect("user_photos")
     
 @login_required
 def user_photos(request):
