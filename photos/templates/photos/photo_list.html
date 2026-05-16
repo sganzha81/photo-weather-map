@@ -15,17 +15,57 @@
         #map { width: 100vw; height: 100vh; }
 
         /* Кнопка загрузки фото */
-        .upload-btn {
+        .map-actions {
             position: absolute;
-            top: 10px;
-            left: 80px;
+            top: 12px;
+            left: 70px;
             z-index: 1000;
-            background: #4a90e2;
-            color: white;
-            padding: 10px 15px;
+
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .map-action-btn {
+            width: 190px;
+            box-sizing: border-box;
+
+            display: block;
+            padding: 9px 12px;
+
             border-radius: 8px;
+            text-align: center;
             text-decoration: none;
-            font-size: 14px;
+
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .upload-btn {
+            background: #4a90e2;
+        }
+
+        .my-photos-btn {
+            background: #4caf50;
+        }
+
+        @media (max-width: 600px) {
+            .map-actions {
+                top: 10px;
+                left: 64px;
+                gap: 6px;
+            }
+
+            .map-action-btn {
+                width: 165px;
+                font-size: 14px;
+                padding: 8px 10px;
+            }
         }
 
         /* Блок с именем пользователя и кнопкой Выйти */
@@ -151,19 +191,15 @@
 
     <!-- Кнопка Загрузить фото (только для авторизованных) -->
     {% if user.is_authenticated %}
-        <a href="{% url 'user_photos' %}" style="
-            position: absolute;
-            top: 10px;
-            left: 220px;   /* или подбери позицию */
-            z-index: 1000;
-            background: #4caf50;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-family: Arial, sans-serif;
-        ">📁 Мои фото</a>
-        <a href="{% url 'upload_photo' %}" class="upload-btn">📤 Загрузить фото</a>
+        <div class="map-actions">
+            <a href="{% url 'upload_photo' %}" class="map-action-btn upload-btn">
+                📤 Загрузить фото
+            </a>
+
+            <a href="{% url 'user_photos' %}" class="map-action-btn my-photos-btn">
+                📁 Мои фото
+            </a>
+        </div>
         <div class="user-bar">
             <span>{{ user.username }}</span>
             <a href="{% url 'logout' %}">Выйти</a>
