@@ -120,6 +120,9 @@ def get_place_name(request):
 def photos_geojson(request):
     """Возвращает все фото текущего пользователя в формате GeoJSON."""
     photos = Photo.objects.filter(user=request.user)
+    exclude_photo_id = request.GET.get("exclude")
+    if exclude_photo_id:
+        photos = photos.exclude(pk=exclude_photo_id)
 
     features = []
     for photo in photos:

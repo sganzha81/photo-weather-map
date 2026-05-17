@@ -96,6 +96,22 @@
             font-size: 15px;
         }
 
+        .map-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0;
+            color: #222;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .map-toggle input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+        }
+
         .error-list {
             margin: 8px 0 0;
             padding-left: 20px;
@@ -189,6 +205,10 @@
                 <p class="hint">Кликните по карте, чтобы выбрать место съёмки.</p>
                 {{ form.latitude }}
                 {{ form.longitude }}
+                <label class="map-toggle" for="show-other-photos">
+                    <input type="checkbox" id="show-other-photos">
+                    <span>Показать мои другие фото</span>
+                </label>
                 <div id="map"></div>
                 <div class="coords" id="selected-coordinates">Координаты не выбраны</div>
                 {% if form.latitude.errors or form.longitude.errors %}
@@ -214,6 +234,7 @@
         const latitudeInput = document.getElementById('id_latitude');
         const longitudeInput = document.getElementById('id_longitude');
         const coordinatesText = document.getElementById('selected-coordinates');
+        const showOtherPhotosInput = document.getElementById('show-other-photos');
 
         function parseCoordinate(value) {
             if (!value) {
@@ -246,6 +267,20 @@
                 })
             })
         });
+        const otherPhotosSource = new ol.source.Vector();
+        const otherPhotosFormat = new ol.format.GeoJSON();
+        let otherPhotosLoaded = false;
+        const otherPhotosLayer = new ol.layer.Vector({
+            source: otherPhotosSource,
+            visible: false,
+            style: new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 6,
+                    fill: new ol.style.Fill({ color: 'rgba(76, 175, 80, 0.78)' }),
+                    stroke: new ol.style.Stroke({ color: '#ffffff', width: 2 })
+                })
+            })
+        });
 
         const map = new ol.Map({
             target: 'map',
@@ -253,6 +288,7 @@
                 new ol.layer.Tile({
                     source: new ol.source.OSM()
                 }),
+                otherPhotosLayer,
                 markerLayer
             ],
             view: new ol.View({
@@ -277,7 +313,41 @@
             updateCoordinatesText(initialLatitude, initialLongitude);
         }
 
+        showOtherPhotosInput.addEventListener('change', async function() {
+            otherPhotosLayer.setVisible(showOtherPhotosInput.checked);
+
+            if (showOtherPhotosInput.checked && !otherPhotosLoaded) {
+                try {
+                    const response = await fetch("{% url 'photos_geojson' %}?exclude={{ photo.id }}");
+                    const data = await response.json();
+                    const features = otherPhotosFormat.readFeatures(data, {
+                        featureProjection: map.getView().getProjection()
+                    });
+                    otherPhotosSource.addFeatures(features);
+                    otherPhotosLoaded = true;
+                } catch (error) {
+                    console.error('Не удалось загрузить другие фото:', error);
+                }
+            }
+        });
+
         map.on('singleclick', function(event) {
+            const clickedOtherPhoto = map.forEachFeatureAtPixel(
+                event.pixel,
+                function() {
+                    return true;
+                },
+                {
+                    layerFilter: function(layer) {
+                        return layer === otherPhotosLayer && otherPhotosLayer.getVisible();
+                    }
+                }
+            );
+
+            if (clickedOtherPhoto) {
+                return;
+            }
+
             const lonLat = ol.proj.toLonLat(event.coordinate);
             const longitude = lonLat[0];
             const latitude = lonLat[1];
