@@ -128,6 +128,19 @@
             cursor: pointer;
             margin-top: 8px;
         }
+        .edit-btn {
+            display: inline-block;
+            background: #4a90e2;
+            color: white;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            margin-right: 6px;
+        }
+        .edit-btn:hover {
+            background: #357abd;
+        }
         .popup-close-btn {
             position: absolute;
             top: 8px;
@@ -340,6 +353,7 @@
                     <img src="${imageUrl}" alt="Фото">
                     <div class="weather-info">${weather}</div>
                     <div class="place-info" id="place-${id}">Загрузка места...</div>
+                    <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
                     <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>
                 `;
                 popupElement.innerHTML = html;

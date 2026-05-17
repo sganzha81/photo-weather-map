@@ -6,7 +6,9 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 
+from .forms import PhotoEditForm
 from .models import Photo
+from .weather import fetch_weather_for_photo
 
 
 @login_required
@@ -208,3 +210,52 @@ def delete_photo(request, photo_id):
 def user_photos(request):
     photos = Photo.objects.filter(user=request.user).order_by('-uploaded_at')
     return render(request, 'photos/user_photos.html', {'photos': photos})
+
+
+@login_required
+def edit_photo(request, photo_id):
+    photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+
+    if request.method == "POST":
+        form = PhotoEditForm(request.POST, instance=photo)
+
+        if form.is_valid():
+            photo = form.save(commit=False)
+
+            if (
+                photo.latitude is not None
+                and photo.longitude is not None
+                and photo.taken_at is not None
+            ):
+                photo.weather_data = fetch_weather_for_photo(
+                    photo.latitude,
+                    photo.longitude,
+                    photo.taken_at,
+                )
+                messages.success(request, "Фото сохранено, погода обновлена.")
+            else:
+                if photo.latitude is None or photo.longitude is None:
+                    photo.weather_data = None
+                    messages.warning(
+                        request,
+                        "Фото сохранено, но без координат оно не появится на карте.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "Фото сохранено, но без даты съёмки погоду обновить нельзя.",
+                    )
+
+            photo.save()
+            return redirect("user_photos")
+    else:
+        form = PhotoEditForm(instance=photo)
+
+    return render(
+        request,
+        "photos/edit_photo.html",
+        {
+            "form": form,
+            "photo": photo,
+        },
+    )

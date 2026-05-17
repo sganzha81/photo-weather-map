@@ -28,13 +28,26 @@
         img {
             border-radius: 4px;
         }
+        .action-link,
         button {
-            background-color: #ff4d4d;
             color: white;
             border: none;
             padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
+            font: inherit;
+        }
+        .action-link {
+            display: inline-block;
+            background-color: #4a90e2;
+            text-decoration: none;
+            margin-bottom: 8px;
+        }
+        .action-link:hover {
+            background-color: #357abd;
+        }
+        button {
+            background-color: #ff4d4d;
         }
         button:hover {
             background-color: #d93636;
@@ -43,11 +56,48 @@
             margin-bottom: 20px;
             display: inline-block;
         }
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px;
+        }
+        .messages li {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+        }
+        .message-error {
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+        .message-success {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+        .message-warning {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
     </style>
 </head>
 <body>
     <a href="{% url 'photo_list' %}" class="back-link">← На карту</a>
     <h1>Мои фотографии</h1>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="
+                    {% if 'error' in message.tags %}message-error
+                    {% elif 'warning' in message.tags %}message-warning
+                    {% elif 'success' in message.tags %}message-success
+                    {% endif %}
+                ">
+                    {{ message }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 
     {% if photos %}
     <table>
@@ -72,6 +122,7 @@
                     {% endif %}
                 </td>
                 <td>
+                    <a href="{% url 'edit_photo' photo.id %}" class="action-link">Редактировать</a>
                     <form method="post" action="{% url 'delete_photo' photo.pk %}" onsubmit="return confirm('Удалить это фото?');">
                         {% csrf_token %}
                         <button type="submit">Удалить</button>
