@@ -142,3 +142,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 LOGIN_REDIRECT_URL = "/photos/"  # куда переходить после успешного входа
 LOGOUT_REDIRECT_URL = "/photos/"  # куда переходить после выхода
 LOGIN_URL = "/accounts/login/"  # куда направлять неавторизованных
+
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
