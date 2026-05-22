@@ -5,135 +5,418 @@
     <title>Мои фото — Weatherpins</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 0 15px;
+            margin: 0;
+            min-height: 100vh;
+            background: #f4f6f8;
+            color: #1f2933;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+
+        .page {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            vertical-align: middle;
-        }
-        th {
-            background-color: #f5f5f5;
-        }
-        img {
-            border-radius: 4px;
-        }
-        .action-link,
-        button {
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font: inherit;
-        }
-        .action-link {
-            display: inline-block;
-            background-color: #4a90e2;
-            text-decoration: none;
-            margin-bottom: 8px;
-        }
-        .action-link:hover {
-            background-color: #357abd;
-        }
-        button {
-            background-color: #ff4d4d;
-        }
-        button:hover {
-            background-color: #d93636;
-        }
+
         .back-link {
-            margin-bottom: 20px;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 18px;
+            color: #2563eb;
+            font-weight: 700;
+            text-decoration: none;
         }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 32px;
+            line-height: 1.15;
+        }
+
         .messages {
             list-style: none;
             padding: 0;
-            margin: 0 0 16px;
+            margin: 0 0 20px;
         }
+
         .messages li {
-            padding: 10px;
+            padding: 12px 14px;
             margin-bottom: 10px;
-            border-radius: 6px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 700;
         }
+
         .message-error {
-            background-color: #ffebee;
-            color: #b71c1c;
+            background-color: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
         }
+
         .message-success {
-            background-color: #e8f5e9;
-            color: #1b5e20;
+            background-color: #dcfce7;
+            border-color: #bbf7d0;
+            color: #166534;
         }
+
         .message-warning {
-            background-color: #fff3e0;
-            color: #e65100;
+            background-color: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .photo-card {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .photo-thumb {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+
+        .photo-thumb img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: 14px;
+            padding: 16px;
+        }
+
+        .photo-meta {
+            display: grid;
+            gap: 10px;
+        }
+
+        .meta-row {
+            display: grid;
+            grid-template-columns: 118px 1fr;
+            gap: 10px;
+            line-height: 1.35;
+        }
+
+        .meta-label {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .meta-value {
+            color: #111827;
+            overflow-wrap: anywhere;
+        }
+
+        .status-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .status-ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .weather-text {
+            line-height: 1.4;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .delete-form {
+            margin: 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 14px;
+            border: 0;
+            border-radius: 8px;
+            color: #ffffff;
+            font: inherit;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-edit {
+            background: #2563eb;
+        }
+
+        .btn-edit:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-delete {
+            background: #dc2626;
+        }
+
+        .btn-delete:hover {
+            background: #b91c1c;
+        }
+
+        .empty-state {
+            max-width: 560px;
+            margin: 36px auto 0;
+            padding: 34px 24px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            text-align: center;
+        }
+
+        .empty-state p {
+            margin: 0 0 18px;
+            color: #475569;
+            font-size: 18px;
+        }
+
+        .empty-state .btn {
+            width: auto;
+            min-width: 170px;
+        }
+
+        @media (max-width: 640px) {
+            .page {
+                padding: 18px 12px 28px;
+            }
+
+            .page-header {
+                display: block;
+                margin-bottom: 18px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .photo-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .photo-card {
+                border-radius: 10px;
+            }
+
+            .photo-body {
+                padding: 14px;
+            }
+
+            .meta-row {
+                grid-template-columns: 1fr;
+                gap: 4px;
+                font-size: 16px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                min-height: 46px;
+            }
         }
     </style>
 </head>
 <body>
-    <a href="{% url 'photo_list' %}" class="back-link">← На карту</a>
-    <h1>Мои фотографии</h1>
+    <main class="page">
+        <a href="{% url 'photo_list' %}" class="back-link">← На карту</a>
 
-    {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-                <li class="
-                    {% if 'error' in message.tags %}message-error
-                    {% elif 'warning' in message.tags %}message-warning
-                    {% elif 'success' in message.tags %}message-success
-                    {% endif %}
-                ">
-                    {{ message }}
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+        <div class="page-header">
+            <h1>Мои фотографии</h1>
+        </div>
 
-    {% if photos %}
-    <table>
-        <thead>
-            <tr>
-                <th>Миниатюра</th>
-                <th>Дата загрузки</th>
-                <th>Координаты</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for photo in photos %}
-            <tr>
-                <td><img src="{{ photo.image.url }}" width="80"></td>
-                <td>{{ photo.uploaded_at|date:"d.m.Y H:i" }}</td>
-                <td>
-                    {% if photo.latitude and photo.longitude %}
-                        {{ photo.latitude|floatformat:4 }}, {{ photo.longitude|floatformat:4 }}
-                    {% else %}
-                        Нет геоданных
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'edit_photo' photo.id %}" class="action-link">Редактировать</a>
-                    <form method="post" action="{% url 'delete_photo' photo.pk %}" onsubmit="return confirm('Удалить это фото?');">
-                        {% csrf_token %}
-                        <button type="submit">Удалить</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-        <p>У вас пока нет загруженных фото.</p>
-    {% endif %}
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="
+                        {% if 'error' in message.tags %}message-error
+                        {% elif 'warning' in message.tags %}message-warning
+                        {% elif 'success' in message.tags %}message-success
+                        {% endif %}
+                    ">
+                        {{ message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if photos %}
+            <section class="photo-grid" aria-label="Список фотографий">
+                {% for photo in photos %}
+                    <article class="photo-card">
+                        <div class="photo-thumb">
+                            <img src="{{ photo.image.url }}" alt="Загруженное фото">
+                        </div>
+
+                        <div class="photo-body">
+                            <div class="photo-meta">
+                                <div class="meta-row">
+                                    <div class="meta-label">Дата съёмки</div>
+                                    <div class="meta-value">
+                                        {% if photo.taken_at %}
+                                            {{ photo.taken_at|date:"d.m.Y H:i" }}
+                                        {% else %}
+                                            Не определена
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div class="meta-label">Дата загрузки</div>
+                                    <div class="meta-value">{{ photo.uploaded_at|date:"d.m.Y H:i" }}</div>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div class="meta-label">Статус</div>
+                                    <div class="meta-value">
+                                        <ul class="status-list">
+                                            {% if photo.latitude is not None and photo.longitude is not None %}
+                                                <li class="status status-ok">✅ На карте</li>
+                                            {% else %}
+                                                <li class="status status-warning">⚠️ Нет геоданных</li>
+                                            {% endif %}
+
+                                            {% if not photo.taken_at %}
+                                                <li class="status status-warning">⚠️ Нет даты съёмки</li>
+                                            {% endif %}
+
+                                            {% if not photo.weather_data %}
+                                                <li class="status status-warning">⚠️ Нет погоды</li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div class="meta-label">Координаты</div>
+                                    <div class="meta-value">
+                                        {% if photo.latitude is not None and photo.longitude is not None %}
+                                            {{ photo.latitude|floatformat:5 }}, {{ photo.longitude|floatformat:5 }}
+                                        {% else %}
+                                            Нет геоданных
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div class="meta-label">Погода</div>
+                                    <div class="meta-value weather-text">
+                                        {% if photo.weather_data %}
+                                            {% with weather=photo.weather_data %}
+                                                {% if weather.temperature_max is None and weather.temperature_min is None and weather.precipitation is None %}
+                                                    Нет данных
+                                                {% else %}
+                                                    🌦
+                                                    {% if weather.temperature_max is not None or weather.temperature_min is not None %}
+                                                        {% if weather.temperature_max is not None %}
+                                                            {{ weather.temperature_max|floatformat:0 }}
+                                                        {% else %}
+                                                            ?
+                                                        {% endif %}
+                                                        /
+                                                        {% if weather.temperature_min is not None %}
+                                                            {{ weather.temperature_min|floatformat:0 }}
+                                                        {% else %}
+                                                            ?
+                                                        {% endif %}
+                                                        °C
+                                                    {% endif %}
+
+                                                    {% if weather.precipitation is not None %}
+                                                        {% if weather.temperature_max is not None or weather.temperature_min is not None %}, {% endif %}
+                                                        осадки: {{ weather.precipitation|floatformat:1 }} мм
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            Нет данных
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="actions">
+                                <a href="{% url 'edit_photo' photo.id %}" class="btn btn-edit">Редактировать</a>
+                                <form method="post" action="{% url 'delete_photo' photo.pk %}" class="delete-form" onsubmit="return confirm('Удалить это фото?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-delete">Удалить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </section>
+        {% else %}
+            <section class="empty-state">
+                <p>У вас пока нет загруженных фото.</p>
+                <a href="{% url 'upload_photo' %}" class="btn btn-edit">Загрузить фото</a>
+            </section>
+        {% endif %}
+    </main>
 </body>
 </html>
