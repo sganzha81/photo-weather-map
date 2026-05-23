@@ -25,6 +25,7 @@ pillow_heif.register_heif_opener()
 from fractions import Fraction
 import piexif
 
+
 def is_jpeg_file(file_bytes):
     """Проверяет JPEG по сигнатуре файла."""
     return file_bytes.startswith(b"\xff\xd8")
@@ -33,7 +34,11 @@ def is_jpeg_file(file_bytes):
 def is_heif_file(file_bytes):
     """Проверяет HEIC/HEIF по ISO BMFF ftyp brand."""
     heif_brands = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
-    return len(file_bytes) >= 12 and file_bytes[4:8] == b"ftyp" and file_bytes[8:12] in heif_brands
+    return (
+        len(file_bytes) >= 12
+        and file_bytes[4:8] == b"ftyp"
+        and file_bytes[8:12] in heif_brands
+    )
 
 
 def _normalize_heic_exif_bytes(exif_bytes: bytes) -> bytes:
@@ -49,6 +54,7 @@ def _normalize_heic_exif_bytes(exif_bytes: bytes) -> bytes:
             return b"Exif\x00\x00" + exif_bytes[idx:]
     return exif_bytes
 
+
 def _rational_to_float(value):
     """Переводит rational-пару (num, den) в float."""
     if isinstance(value, tuple) and len(value) == 2:
@@ -57,6 +63,7 @@ def _rational_to_float(value):
             raise ZeroDivisionError("Invalid EXIF rational with denominator = 0")
         return float(Fraction(num, den))
     return float(value)
+
 
 def rational_to_float(value):
     """
@@ -114,16 +121,13 @@ def dms_to_decimal(dms, ref):
 
     degrees, minutes, seconds = dms
 
-    decimal = (
-        float(degrees)
-        + float(minutes) / 60
-        + float(seconds) / 3600
-    )
+    decimal = float(degrees) + float(minutes) / 60 + float(seconds) / 3600
 
     if ref in ["S", "W"]:
         decimal = -decimal
 
     return decimal
+
 
 def extract_gps(exif_data):
     """Вытаскивает широту и долготу из GPSInfo, если есть."""
@@ -147,6 +151,7 @@ def extract_gps(exif_data):
     except Exception as e:
         print(f"Ошибка преобразования GPS: {e}")
         return None, None
+
 
 def validate_image_size(image):
     max_size_mb = 10
@@ -295,8 +300,12 @@ class Photo(models.Model):
     image = models.ImageField(
         upload_to="photos/%Y/%m/", validators=[validate_image_size]
     )
-    file_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name='Хэш файла')
-    pixel_hash = models.CharField(max_length=64, blank=True, null=True, verbose_name='Хэш пикселей')
+    file_hash = models.CharField(
+        max_length=64, blank=True, null=True, verbose_name="Хэш файла"
+    )
+    pixel_hash = models.CharField(
+        max_length=64, blank=True, null=True, verbose_name="Хэш пикселей"
+    )
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     taken_at = models.DateTimeField(null=True, blank=True)
@@ -313,6 +322,7 @@ class Photo(models.Model):
 
     def clean(self):
         if self.image and not self.pk:
+            validate_image_size(self.image)
             try:
                 # --- 0. Читаем сырые байты ---
                 self.image.seek(0)
@@ -329,19 +339,21 @@ class Photo(models.Model):
                     lat, lon, taken = extract_metadata_from_heif(file_bytes)
 
                     if lat is not None and lon is not None:
-                            self.latitude = lat
-                            self.longitude = lon
+                        self.latitude = lat
+                        self.longitude = lon
 
                     if taken:
-                            self.taken_at = taken
+                        self.taken_at = taken
                     # Конвертируем в JPEG для отображения (без сохранения EXIF)
                     try:
                         img_heic = Image.open(io.BytesIO(file_bytes))
                         buf = io.BytesIO()
-                        img_heic.save(buf, format='JPEG', quality=92)
+                        img_heic.save(buf, format="JPEG", quality=92)
                         buf.seek(0)
-                        new_name = os.path.splitext(self.image.name)[0] + '.jpg'
-                        self.image = SimpleUploadedFile(new_name, buf.read(), content_type='image/jpeg')
+                        new_name = os.path.splitext(self.image.name)[0] + ".jpg"
+                        self.image = SimpleUploadedFile(
+                            new_name, buf.read(), content_type="image/jpeg"
+                        )
                         self.image.seek(0)
                         file_bytes = self.image.read()
                         self.image.seek(0)
@@ -354,20 +366,26 @@ class Photo(models.Model):
                 # --- 3. Открываем изображение Pillow ---
                 img = Image.open(io.BytesIO(file_bytes))
 
-                if file_looks_like_jpeg and lower_name.endswith(('.heic', '.heif')):
-                    new_name = os.path.splitext(self.image.name)[0] + '.jpg'
+                if file_looks_like_jpeg and lower_name.endswith((".heic", ".heif")):
+                    new_name = os.path.splitext(self.image.name)[0] + ".jpg"
                     self.image.name = new_name
 
                 # --- 4. Пиксельный хэш ---
                 with io.BytesIO() as out:
-                    img.save(out, format='BMP')
+                    img.save(out, format="BMP")
                     pixel_bytes = out.getvalue()
                 self.pixel_hash = hashlib.sha256(pixel_bytes).hexdigest()
 
                 # --- 5. Проверка на дубликат ---
                 if self.user and self.pixel_hash:
-                    if Photo.objects.filter(user=self.user, pixel_hash=self.pixel_hash).exclude(pk=self.pk).exists():
-                        raise ValidationError('Вы уже загружали такое фото (визуально идентичное).')
+                    if (
+                        Photo.objects.filter(user=self.user, pixel_hash=self.pixel_hash)
+                        .exclude(pk=self.pk)
+                        .exists()
+                    ):
+                        raise ValidationError(
+                            "Вы уже загружали такое фото (визуально идентичное)."
+                        )
 
                 # --- 6. EXIF для не-HEIC (для JPEG и др.) ---
                 if not file_looks_like_heif:
@@ -423,7 +441,7 @@ class Photo(models.Model):
             f"({self.latitude}, {self.longitude})" if self.latitude else "без координат"
         )
         return f"Photo {self.id} {dt} {coords}"
-    
+
     def delete(self, *args, **kwargs):
         # Удаляем файл изображения с диска, если он есть
         if self.image:

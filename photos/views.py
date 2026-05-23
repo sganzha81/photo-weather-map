@@ -5,6 +5,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.views.decorators.http import require_POST
 
 from .forms import PhotoEditForm
 from .models import Photo
@@ -211,8 +213,75 @@ def delete_photo(request, photo_id):
     
 @login_required
 def user_photos(request):
-    photos = Photo.objects.filter(user=request.user).order_by('-uploaded_at')
-    return render(request, 'photos/user_photos.html', {'photos': photos})
+    active_status = request.GET.get("status", "all")
+    base_photos = Photo.objects.filter(user=request.user)
+    photos = base_photos.order_by("-uploaded_at")
+
+    filter_counts = {
+        "all": base_photos.count(),
+        "on_map": base_photos.filter(
+            latitude__isnull=False,
+            longitude__isnull=False,
+        ).count(),
+        "no_geo": base_photos.filter(
+            Q(latitude__isnull=True) | Q(longitude__isnull=True),
+        ).count(),
+        "no_date": base_photos.filter(taken_at__isnull=True).count(),
+        "no_weather": base_photos.filter(weather_data__isnull=True).count(),
+    }
+
+    if active_status == "on_map":
+        photos = photos.filter(latitude__isnull=False, longitude__isnull=False)
+    elif active_status == "no_geo":
+        photos = photos.filter(Q(latitude__isnull=True) | Q(longitude__isnull=True))
+    elif active_status == "no_date":
+        photos = photos.filter(taken_at__isnull=True)
+    elif active_status == "no_weather":
+        photos = photos.filter(weather_data__isnull=True)
+    else:
+        active_status = "all"
+
+    return render(
+        request,
+        "photos/user_photos.html",
+        {
+            "photos": photos,
+            "active_status": active_status,
+            "filter_counts": filter_counts,
+        },
+    )
+
+
+@login_required
+@require_POST
+def refresh_weather(request, photo_id):
+    photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+
+    if (
+        photo.latitude is None
+        or photo.longitude is None
+        or photo.taken_at is None
+    ):
+        messages.warning(
+            request,
+            "Для обновления погоды нужны координаты и дата съёмки.",
+        )
+        return redirect("user_photos")
+
+    result = fetch_weather_for_photo(
+        photo.latitude,
+        photo.longitude,
+        photo.taken_at,
+    )
+
+    if result is not None:
+        photo.weather_data = result
+        photo.save(update_fields=["weather_data"])
+        messages.success(request, "Погода обновлена.")
+    else:
+        messages.warning(request, "Не удалось получить погоду. Попробуйте позже.")
+
+    return redirect("user_photos")
 
 
 @login_required
