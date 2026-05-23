@@ -2,87 +2,377 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>Загрузить фото</title>
+    <title>Загрузить фото — Weatherpins</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
+            min-height: 100vh;
             font-family: Arial, sans-serif;
-            max-width: 500px;
-            margin: 40px auto;
-            padding: 20px;
+            background: #f5f7fb;
+            color: #111827;
+            padding: 32px 16px;
         }
-        h1 {
-            text-align: center;
+
+        .page {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
         }
-        form {
+
+        .nav-links {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
         }
+
+        .nav-link {
+            color: #2563eb;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+
+        .upload-card {
+            width: 100%;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 38px 34px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 24px;
+            font-size: 42px;
+            line-height: 1.1;
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 22px;
+        }
+
+        .messages li {
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border: 1px solid #dbe3ef;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .message-error {
+            background-color: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .message-success {
+            background-color: #dcfce7;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .message-warning {
+            background-color: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+
+        .hint-panel {
+            display: grid;
+            gap: 10px;
+            margin: 0 0 24px;
+            padding: 16px 18px;
+            border: 1px solid #dbe3ef;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .hint-panel p {
+            margin: 0;
+            color: #334155;
+            font-size: 16px;
+            line-height: 1.45;
+        }
+
+        .hint-panel strong {
+            color: #111827;
+        }
+
+        .upload-form {
+            display: grid;
+            gap: 18px;
+        }
+
+        .file-field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .file-field label {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
         input[type="file"] {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-        button {
-            background-color: #4a90e2;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
+            width: 100%;
+            padding: 14px;
+            border: 1px dashed #94a3b8;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #111827;
             font-size: 16px;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #357abd;
+
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.18);
         }
-        .back-link {
+
+        .selected-files {
+            display: none;
+            margin: 2px 0 0;
+            padding: 0;
+            list-style: none;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .selected-files.has-files {
             display: block;
+        }
+
+        .selected-files li {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            padding: 12px 14px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+
+        .selected-files li:first-child {
+            border-top: 0;
+        }
+
+        .file-name {
+            overflow-wrap: anywhere;
+            font-weight: 700;
+        }
+
+        .file-size {
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .file-warning {
+            grid-column: 1 / -1;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 52px;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 12px;
+            background: #4a90e2;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .submit-button:hover {
+            background: #3d7fc9;
+        }
+
+        .submit-button:disabled {
+            background: #94a3b8;
+            cursor: wait;
+        }
+
+        .loading-note {
+            display: none;
+            margin: -4px 0 0;
+            color: #475569;
+            font-size: 15px;
+            line-height: 1.4;
             text-align: center;
-            margin-top: 20px;
         }
-        .message-error {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            background-color: #ffebee;
-            color: #b71c1c;
+
+        .loading-note.is-visible {
+            display: block;
         }
-        .message-success {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            background-color: #e8f5e9;
-            color: #1b5e20;
+
+        @media (max-width: 600px) {
+            body {
+                padding: 24px 14px;
+            }
+
+            .upload-card {
+                padding: 30px 20px;
+                border-radius: 16px;
+                box-shadow: none;
+            }
+
+            h1 {
+                font-size: 36px;
+                margin-bottom: 22px;
+            }
+
+            .hint-panel {
+                padding: 14px;
+            }
+
+            .hint-panel p,
+            input[type="file"] {
+                font-size: 15px;
+            }
+
+            .selected-files li {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .file-size {
+                white-space: normal;
+            }
+
+            .submit-button {
+                font-size: 19px;
+            }
         }
     </style>
 </head>
 <body>
-    {% if messages %}
-  <ul style="list-style: none; padding: 0;">
-    {% for message in messages %}
-      <li class="
-          {% if 'error' in message.tags %}message-error
-          {% elif 'success' in message.tags %}message-success
-          {% endif %}
-      ">
-        {{ message }}
-      </li>
-    {% endfor %}
-  </ul>
-    {% endif %}
+    <main class="page">
+        <nav class="nav-links" aria-label="Навигация">
+            <a href="{% url 'photo_list' %}" class="nav-link">← На карту</a>
+            <a href="{% url 'user_photos' %}" class="nav-link">Мои фото</a>
+        </nav>
 
-    <h1>Загрузить фотографию</h1>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input
-            type="file"
-            name="image"
-            accept="image/*,.heic,.heif,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
-            multiple
-        >
-        <button type="submit">Загрузить</button>
-    </form>
-    <a href="{% url 'photo_list' %}" class="back-link">Вернуться на карту</a>
+        <section class="upload-card">
+            <h1>Загрузить фото</h1>
+
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li class="
+                            {% if 'error' in message.tags %}message-error
+                            {% elif 'success' in message.tags %}message-success
+                            {% elif 'warning' in message.tags %}message-warning
+                            {% endif %}
+                        ">
+                            {{ message }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="hint-panel">
+                <p><strong>Форматы:</strong> JPG, JPEG, PNG, HEIC, HEIF.</p>
+                <p><strong>Размер:</strong> максимум 10 МБ на файл.</p>
+                <p>Чтобы фото появилось на карте, в нём должны быть GPS-геометки.</p>
+                <p>Если геометок нет, место можно будет выбрать вручную в “Мои фото”.</p>
+                <p>Если погода не подтянулась сразу, её можно обновить позже в “Мои фото”.</p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="upload-form" id="upload-form">
+                {% csrf_token %}
+
+                <div class="file-field">
+                    <label for="photo-files">Выберите фото</label>
+                    <input
+                        type="file"
+                        id="photo-files"
+                        name="image"
+                        accept="image/*,.heic,.heif,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
+                        multiple
+                    >
+                </div>
+
+                <ul class="selected-files" id="selected-files" aria-live="polite"></ul>
+
+                <button type="submit" class="submit-button" id="submit-button">Загрузить</button>
+                <p class="loading-note" id="loading-note">Это может занять несколько секунд, особенно для HEIC-файлов.</p>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const maxFileSizeBytes = 10 * 1024 * 1024;
+            const fileInput = document.querySelector('input[name="image"]');
+            const fileList = document.getElementById('selected-files');
+            const form = document.getElementById('upload-form');
+            const submitButton = document.getElementById('submit-button');
+            const loadingNote = document.getElementById('loading-note');
+
+            function formatSize(size) {
+                return (size / 1024 / 1024).toFixed(2) + ' МБ';
+            }
+
+            fileInput.addEventListener('change', function () {
+                fileList.innerHTML = '';
+                fileList.classList.toggle('has-files', fileInput.files.length > 0);
+
+                Array.from(fileInput.files).forEach(function (file) {
+                    const item = document.createElement('li');
+                    const name = document.createElement('span');
+                    const size = document.createElement('span');
+
+                    name.className = 'file-name';
+                    name.textContent = file.name;
+
+                    size.className = 'file-size';
+                    size.textContent = formatSize(file.size);
+
+                    item.appendChild(name);
+                    item.appendChild(size);
+
+                    if (file.size > maxFileSizeBytes) {
+                        const warning = document.createElement('span');
+                        warning.className = 'file-warning';
+                        warning.textContent = 'Файл больше 10 МБ — уменьшите размер файла перед загрузкой.';
+                        item.appendChild(warning);
+                    }
+
+                    fileList.appendChild(item);
+                });
+            });
+
+            form.addEventListener('submit', function () {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Загружаем и обрабатываем…';
+                loadingNote.classList.add('is-visible');
+            });
+        }());
+    </script>
 </body>
 </html>
