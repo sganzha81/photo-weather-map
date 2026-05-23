@@ -256,6 +256,14 @@
             background: #1d4ed8;
         }
 
+        .btn-map {
+            background: #16a34a;
+        }
+
+        .btn-map:hover {
+            background: #15803d;
+        }
+
         .btn-weather {
             background: #0891b2;
         }
@@ -482,6 +490,9 @@
 
                             <div class="actions">
                                 <a href="{% url 'edit_photo' photo.id %}" class="btn btn-edit">Редактировать</a>
+                                {% if photo.latitude is not None and photo.longitude is not None %}
+                                    <a href="{% url 'photo_list' %}?photo_id={{ photo.id }}" class="btn btn-map">Показать на карте</a>
+                                {% endif %}
                                 {% if photo.latitude is not None and photo.longitude is not None and photo.taken_at and not photo.weather_data %}
                                     <form method="post" action="{% url 'refresh_weather' photo.id %}" class="weather-form">
                                         {% csrf_token %}
