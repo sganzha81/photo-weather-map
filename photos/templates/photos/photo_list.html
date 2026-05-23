@@ -87,9 +87,12 @@
             font-weight: bold;
         }
 
-        /* Всплывающее окно (popup) */
-        /* Всплывающее окно (popup) */
         .popup-overlay {
+            --drag-x: 0px;
+            --drag-y: 0px;
+            position: relative;
+        }
+        .popup-card {
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.3);
@@ -98,8 +101,34 @@
             max-width: 240px;
             font-size: 14px;
             position: relative;
+            transform: translate(var(--drag-x, 0px), var(--drag-y, 0px));
+            user-select: text;
         }
-        .popup-overlay img {
+        .popup-card.is-dragging,
+        .popup-card.is-dragging * {
+            cursor: grabbing;
+            user-select: none;
+        }
+        .popup-drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: -6px 22px 8px 0;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f5f7fa;
+            color: #555;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            cursor: grab;
+            touch-action: none;
+        }
+        .popup-drag-handle:active {
+            cursor: grabbing;
+        }
+        .popup-card img {
             display: block;
             margin: 8px auto;
             max-width: 150px;       /* <-- ограничиваем ширину */
@@ -210,7 +239,7 @@
             </a>
 
             <a href="{% url 'user_photos' %}" class="map-action-btn my-photos-btn">
-                📁 Мои фото
+                ← Мои фото
             </a>
         </div>
         <div class="user-bar">
@@ -243,6 +272,7 @@
             return cookieValue;
         }
         const csrftoken = getCookie('csrftoken');
+        const targetPhotoId = new URLSearchParams(window.location.search).get('photo_id');
 
         // ---------- 2. Создание карты ----------
         const map = new ol.Map({
@@ -260,19 +290,29 @@
         });
 
         // ---------- 3. Векторный слой для фотографий ----------
+        const regularPhotoStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 8,
+                fill: new ol.style.Fill({ color: '#4a90e2' }),
+                stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+            })
+        });
+        const selectedPhotoStyle = new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 11,
+                fill: new ol.style.Fill({ color: '#f97316' }),
+                stroke: new ol.style.Stroke({ color: 'white', width: 3 })
+            })
+        });
+        let selectedFeature = null;
+
         const vectorSource = new ol.source.Vector({
             url: '/photos/data.json',
             format: new ol.format.GeoJSON()
         });
         const vectorLayer = new ol.layer.Vector({
             source: vectorSource,
-            style: new ol.style.Style({
-                image: new ol.style.Circle({
-                    radius: 8,
-                    fill: new ol.style.Fill({ color: '#4a90e2' }),
-                    stroke: new ol.style.Stroke({ color: 'white', width: 2 })
-                })
-            })
+            style: regularPhotoStyle
         });
         map.addLayer(vectorLayer);
 
@@ -294,9 +334,137 @@
         });
         map.addOverlay(popupOverlay);
 
+        let popupDragOffsetX = 0;
+        let popupDragOffsetY = 0;
+        let isPopupDragging = false;
+        let popupDragStartX = 0;
+        let popupDragStartY = 0;
+        let popupDragStartOffsetX = 0;
+        let popupDragStartOffsetY = 0;
+
+        function applyPopupDragOffset() {
+            popupElement.style.setProperty('--drag-x', `${popupDragOffsetX}px`);
+            popupElement.style.setProperty('--drag-y', `${popupDragOffsetY}px`);
+        }
+
+        function resetPopupDragOffset() {
+            popupDragOffsetX = 0;
+            popupDragOffsetY = 0;
+            isPopupDragging = false;
+            applyPopupDragOffset();
+            popupElement.querySelector('.popup-card')?.classList.remove('is-dragging');
+        }
+
+        popupElement.addEventListener('pointerdown', function(event) {
+            const handle = event.target.closest('.popup-drag-handle');
+            if (!handle) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            isPopupDragging = true;
+            popupDragStartX = event.clientX;
+            popupDragStartY = event.clientY;
+            popupDragStartOffsetX = popupDragOffsetX;
+            popupDragStartOffsetY = popupDragOffsetY;
+
+            popupElement.querySelector('.popup-card')?.classList.add('is-dragging');
+            handle.setPointerCapture?.(event.pointerId);
+        });
+
+        window.addEventListener('pointermove', function(event) {
+            if (!isPopupDragging) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            popupDragOffsetX = popupDragStartOffsetX + event.clientX - popupDragStartX;
+            popupDragOffsetY = popupDragStartOffsetY + event.clientY - popupDragStartY;
+            applyPopupDragOffset();
+        }, { passive: false });
+
+        window.addEventListener('pointerup', function(event) {
+            if (!isPopupDragging) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            isPopupDragging = false;
+            popupElement.querySelector('.popup-card')?.classList.remove('is-dragging');
+        });
+
+        window.addEventListener('pointercancel', function() {
+            isPopupDragging = false;
+            popupElement.querySelector('.popup-card')?.classList.remove('is-dragging');
+        });
+
         // ---------- 5. Функция закрытия попапа ----------
         function closePopup() {
             popupElement.style.display = 'none';
+            resetPopupDragOffset();
+            selectFeature(null);
+        }
+
+        function selectFeature(feature) {
+            if (selectedFeature && selectedFeature !== feature) {
+                selectedFeature.setStyle(regularPhotoStyle);
+            }
+            selectedFeature = feature;
+            if (selectedFeature) {
+                selectedFeature.setStyle(selectedPhotoStyle);
+            }
+        }
+
+        function openPhotoPopup(feature) {
+            const props = feature.getProperties();
+            const lonLat = feature.get('lonLat') || feature.getGeometry().getCoordinates();
+            const id = props.id;
+            const date = props.date;
+            const weather = props.weather;
+            const imageUrl = props.image_url;
+
+            // Строим HTML попапа
+            const html = `
+                <div class="popup-card">
+                    <div class="popup-drag-handle" title="Перетащить карточку">↕ Перетащить</div>
+                    <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
+                    <b>${date}</b><br>
+                    <img src="${imageUrl}" alt="Фото">
+                    <div class="weather-info">${weather}</div>
+                    <div class="place-info" id="place-${id}">Загрузка места...</div>
+                    <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
+                    <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>
+                </div>
+            `;
+            resetPopupDragOffset();
+            popupElement.innerHTML = html;
+            applyPopupDragOffset();
+            popupElement.style.display = 'block';
+            popupOverlay.setPosition(lonLat);
+            selectFeature(feature);
+
+            // Запрашиваем место через Nominatim (как и раньше)
+            const placeSpan = document.getElementById('place-' + id);
+            if (placeSpan && !placeSpan.dataset.loaded) {
+                const url = `/photos/place/?lat=${ol.proj.toLonLat(lonLat)[1]}&lon=${ol.proj.toLonLat(lonLat)[0]}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            placeSpan.textContent = 'Место не определено';
+                        } else {
+                            let shortName = data.name || data.display_name;
+                            if (data.display_name && data.display_name.includes(',')) {
+                                shortName = data.display_name.split(',')[0].trim();
+                            }
+                            placeSpan.textContent = '📍 ' + shortName;
+                            placeSpan.dataset.loaded = 'true';
+                        }
+                    })
+                    .catch(err => {
+                        placeSpan.textContent = 'Ошибка загрузки места';
+                    });
+            }
         }
 
         // ---------- 6. Обработка клика по карте (закрываем попап при клике в пустоту) ----------
@@ -315,22 +483,27 @@
             // Событие featuresloadend вызывается, когда все объекты загружены
             const features = vectorSource.getFeatures();
             features.forEach(function(feature) {
-                const props = feature.getProperties();
                 const lonLat = feature.getGeometry().getCoordinates();
                 // Сохраняем координаты для оверлея
                 feature.set('lonLat', lonLat);
-
-                // Включаем реакцию на клик
-                feature.setStyle(function() {
-                    return new ol.style.Style({
-                        image: new ol.style.Circle({
-                            radius: 8,
-                            fill: new ol.style.Fill({ color: '#4a90e2' }),
-                            stroke: new ol.style.Stroke({ color: 'white', width: 2 })
-                        })
-                    });
-                });
+                feature.setStyle(regularPhotoStyle);
             });
+
+            if (targetPhotoId) {
+                const targetFeature = features.find(function(feature) {
+                    return String(feature.getProperties().id) === targetPhotoId;
+                });
+
+                if (targetFeature) {
+                    const lonLat = targetFeature.get('lonLat');
+                    map.getView().animate({
+                        center: lonLat,
+                        zoom: 12,
+                        duration: 400
+                    });
+                    openPhotoPopup(targetFeature);
+                }
+            }
         });
 
         // Реальный клик по маркеру обрабатываем через Select interaction? Будем использовать click на карте с проверкой.
@@ -339,49 +512,7 @@
                 return feature;
             });
             if (feature) {
-                const props = feature.getProperties();
-                const lonLat = feature.get('lonLat');
-                const id = props.id;
-                const date = props.date;
-                const weather = props.weather;
-                const imageUrl = props.image_url;
-
-                // Строим HTML попапа
-                const html = `
-                    <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
-                    <b>${date}</b><br>
-                    <img src="${imageUrl}" alt="Фото">
-                    <div class="weather-info">${weather}</div>
-                    <div class="place-info" id="place-${id}">Загрузка места...</div>
-                    <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
-                    <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>
-                `;
-                popupElement.innerHTML = html;
-                popupElement.style.display = 'block';
-                popupOverlay.setPosition(lonLat);   // <-- исправлено: передаём координаты в проекции карты
-
-                // Запрашиваем место через Nominatim (как и раньше)
-                const placeSpan = document.getElementById('place-' + id);
-                if (placeSpan && !placeSpan.dataset.loaded) {
-                    const url = `/photos/place/?lat=${ol.proj.toLonLat(lonLat)[1]}&lon=${ol.proj.toLonLat(lonLat)[0]}`;
-                    fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.error) {
-                                placeSpan.textContent = 'Место не определено';
-                            } else {
-                                let shortName = data.name || data.display_name;
-                                if (data.display_name && data.display_name.includes(',')) {
-                                    shortName = data.display_name.split(',')[0].trim();
-                                }
-                                placeSpan.textContent = '📍 ' + shortName;
-                                placeSpan.dataset.loaded = 'true';
-                            }
-                        })
-                        .catch(err => {
-                            placeSpan.textContent = 'Ошибка загрузки места';
-                        });
-                }
+                openPhotoPopup(feature);
             } else {
                 closePopup();
             }
