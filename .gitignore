@@ -20,5 +20,8 @@ media/
 .DS_Store
 Thumbs.db
 
-# VS Code (если хочешь, чтобы настройки IDE не загружались)
+# VS Code
 .vscode/
+
+# Geany
+*.geany
