@@ -1,9 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <title>Мои фото — Weatherpins</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'photos/brand/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'photos/brand/site.webmanifest' %}">
     <style>
         * {
             box-sizing: border-box;
@@ -34,6 +40,18 @@
 
         .back-link:hover {
             text-decoration: underline;
+        }
+
+        .brand-logo {
+            display: block;
+            max-width: 280px;
+            width: 80%;
+            height: auto;
+            margin: 0 auto 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 10px 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
         }
 
         .page-header {
@@ -376,6 +394,11 @@
                 grid-template-columns: 1fr;
             }
 
+            .brand-logo {
+                max-width: 240px;
+                margin-bottom: 18px;
+            }
+
             .btn {
                 min-height: 46px;
             }
@@ -385,6 +408,12 @@
 <body>
     <main class="page">
         <a href="{% url 'photo_list' %}" class="back-link">← На карту</a>
+
+        <img
+            src="{% static 'photos/brand/weatherpins-logo.png' %}"
+            alt="Weatherpins"
+            class="brand-logo"
+        >
 
         <div class="page-header">
             <h1>Мои фотографии</h1>

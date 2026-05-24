@@ -1,9 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Вход — Weatherpins</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'photos/brand/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'photos/brand/site.webmanifest' %}">
 
     <style>
         * {
@@ -29,6 +35,18 @@
             border-radius: 18px;
             padding: 36px 32px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .brand-logo {
+            display: block;
+            max-width: 320px;
+            width: 80%;
+            height: auto;
+            margin: 0 auto 24px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 10px 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
         }
 
         .login-title {
@@ -113,6 +131,11 @@
                 border-radius: 16px;
             }
 
+            .brand-logo {
+                max-width: 260px;
+                margin-bottom: 20px;
+            }
+
             .login-title {
                 font-size: 36px;
             }
@@ -135,6 +158,11 @@
 </head>
 <body>
     <main class="login-card">
+        <img
+            src="{% static 'photos/brand/weatherpins-logo.png' %}"
+            alt="Weatherpins"
+            class="brand-logo"
+        >
         <h1 class="login-title">Вход</h1>
 
         {% if form.errors %}

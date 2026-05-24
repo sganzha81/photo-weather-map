@@ -1,9 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
     <title>Загрузить фото — Weatherpins</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'photos/brand/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'photos/brand/site.webmanifest' %}">
     <style>
         * {
             box-sizing: border-box;
@@ -48,6 +54,18 @@
             border-radius: 18px;
             padding: 38px 34px;
             box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .brand-logo {
+            display: block;
+            max-width: 320px;
+            width: 80%;
+            height: auto;
+            margin: 0 auto 24px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 10px 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
         }
 
         h1 {
@@ -241,6 +259,11 @@
                 box-shadow: none;
             }
 
+            .brand-logo {
+                max-width: 260px;
+                margin-bottom: 20px;
+            }
+
             h1 {
                 font-size: 36px;
                 margin-bottom: 22px;
@@ -278,6 +301,11 @@
         </nav>
 
         <section class="upload-card">
+            <img
+                src="{% static 'photos/brand/weatherpins-logo.png' %}"
+                alt="Weatherpins"
+                class="brand-logo"
+            >
             <h1>Загрузить фото</h1>
 
             {% if messages %}
