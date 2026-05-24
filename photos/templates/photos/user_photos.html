@@ -219,6 +219,27 @@
             line-height: 1.4;
         }
 
+        .climate-box {
+            padding: 10px 12px;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            background: #f0f9ff;
+            color: #0f172a;
+            line-height: 1.45;
+        }
+
+        .climate-title {
+            margin-bottom: 4px;
+            color: #075985;
+            font-weight: 800;
+        }
+
+        .climate-years {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
         .actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -227,7 +248,8 @@
         }
 
         .delete-form,
-        .weather-form {
+        .weather-form,
+        .climate-form {
             margin: 0;
         }
 
@@ -270,6 +292,14 @@
 
         .btn-weather:hover {
             background: #0e7490;
+        }
+
+        .btn-climate {
+            background: #7c3aed;
+        }
+
+        .btn-climate:hover {
+            background: #6d28d9;
         }
 
         .btn-delete {
@@ -495,6 +525,29 @@
                                         {% endif %}
                                     </div>
                                 </div>
+
+                                {% if photo.climate_data %}
+                                    <div class="meta-row">
+                                        <div class="meta-label">Норма</div>
+                                        <div class="meta-value">
+                                            {% with climate=photo.climate_data %}
+                                                <div class="climate-box">
+                                                    <div class="climate-title">📊 Климатическая норма</div>
+                                                    {% if climate.normal_temperature is not None %}
+                                                        <div>
+                                                            Обычно:
+                                                            {% if climate.normal_temperature > 0 %}+{% endif %}{{ climate.normal_temperature|floatformat:1 }} °C
+                                                        </div>
+                                                    {% endif %}
+                                                    <div>{{ climate.comparison_text }}</div>
+                                                    {% if climate.years_used %}
+                                                        <div class="climate-years">По годам: {{ climate.years_used|join:", " }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
 
                             <div class="actions">
@@ -506,6 +559,12 @@
                                     <form method="post" action="{% url 'refresh_weather' photo.id %}" class="weather-form">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-weather">Обновить погоду</button>
+                                    </form>
+                                {% endif %}
+                                {% if not photo.climate_data and photo.latitude is not None and photo.longitude is not None and photo.taken_at and photo.weather_data %}
+                                    <form method="post" action="{% url 'calculate_climate_norm' photo.id %}" class="climate-form">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-climate">Рассчитать норму</button>
                                     </form>
                                 {% endif %}
                                 <form method="post" action="{% url 'delete_photo' photo.pk %}" class="delete-form" onsubmit="return confirm('Удалить это фото?');">

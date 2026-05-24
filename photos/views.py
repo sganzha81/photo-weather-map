@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.views.decorators.http import require_POST
 
 from .forms import PhotoEditForm
+from .climate import fetch_climate_comparison_for_photo
 from .models import Photo
 from .weather import fetch_weather_for_photo
 from .weather_codes import get_weather_info
@@ -146,6 +147,7 @@ def photos_geojson(request):
 
         taken = photo.taken_at or photo.uploaded_at
         date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
+        climate_data = photo.climate_data or {}
 
         feature = {
             "type": "Feature",
@@ -167,6 +169,10 @@ def photos_geojson(request):
                 "weather_precipitation": weather_precipitation,
                 "weather_time": weather_time,
                 "weather_time_display": format_weather_time(weather_time),
+                "climate_normal_temperature": climate_data.get("normal_temperature"),
+                "climate_temperature_anomaly": climate_data.get("temperature_anomaly"),
+                "climate_comparison_text": climate_data.get("comparison_text"),
+                "climate_source": climate_data.get("source"),
                 "image_url": photo.image.url if photo.image else "",
             }
         }
@@ -290,6 +296,37 @@ def refresh_weather(request, photo_id):
         messages.success(request, "Погода обновлена.")
     else:
         messages.warning(request, "Не удалось получить погоду. Попробуйте позже.")
+
+    return redirect("user_photos")
+
+
+@login_required
+@require_POST
+def calculate_climate_norm(request, photo_id):
+    photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+
+    if (
+        photo.latitude is None
+        or photo.longitude is None
+        or photo.taken_at is None
+        or not photo.weather_data
+    ):
+        messages.warning(
+            request,
+            "Для расчёта нормы нужны координаты, дата и погода.",
+        )
+        return redirect("user_photos")
+
+    result = fetch_climate_comparison_for_photo(photo)
+    if result is not None:
+        photo.climate_data = result
+        photo.save(update_fields=["climate_data"])
+        messages.success(request, "Климатическая норма рассчитана.")
+    else:
+        messages.warning(
+            request,
+            "Не удалось рассчитать климатическую норму. Попробуйте позже.",
+        )
 
     return redirect("user_photos")
 

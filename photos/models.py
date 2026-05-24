@@ -318,6 +318,7 @@ class Photo(models.Model):
         verbose_name="Пользователь",
     )
     weather_data = models.JSONField(null=True, blank=True)
+    climate_data = models.JSONField(null=True, blank=True)
     exif_raw = models.JSONField(null=True, blank=True)
 
     def clean(self):

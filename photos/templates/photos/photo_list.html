@@ -143,6 +143,16 @@
             margin: 8px 0;
             text-align: center;
         }
+        .climate-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0f172a;
+            padding: 8px;
+            border-radius: 8px;
+            margin: 8px 0;
+            text-align: center;
+            line-height: 1.35;
+        }
         .place-info {
             font-style: italic;
             color: #555;
@@ -467,12 +477,40 @@
             return `<div class="weather-info weather-${escapeHtml(cssClass)}">${lines.join('')}</div>`;
         }
 
+        function formatTemperature(value) {
+            if (!isPresent(value)) return '';
+            const numberValue = Number(value);
+            if (!Number.isFinite(numberValue)) {
+                return escapeHtml(value);
+            }
+            return `${numberValue > 0 ? '+' : ''}${numberValue.toFixed(1)}`;
+        }
+
+        function formatClimate(props) {
+            if (!isPresent(props.climate_comparison_text)) {
+                return '';
+            }
+
+            const lines = [
+                `<div>📊 ${escapeHtml(props.climate_comparison_text)}</div>`
+            ];
+
+            if (isPresent(props.climate_normal_temperature)) {
+                lines.push(
+                    `<div>Обычно: ${formatTemperature(props.climate_normal_temperature)} °C</div>`
+                );
+            }
+
+            return `<div class="climate-info">${lines.join('')}</div>`;
+        }
+
         function openPhotoPopup(feature) {
             const props = feature.getProperties();
             const lonLat = feature.get('lonLat') || feature.getGeometry().getCoordinates();
             const id = props.id;
             const date = props.date;
             const weather = formatWeather(props);
+            const climate = formatClimate(props);
             const imageUrl = props.image_url;
 
             // Строим HTML попапа
@@ -483,6 +521,7 @@
                     <b>${date}</b><br>
                     <img src="${imageUrl}" alt="Фото">
                     ${weather}
+                    ${climate}
                     <div class="place-info" id="place-${id}">Загрузка места...</div>
                     <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
                     <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>

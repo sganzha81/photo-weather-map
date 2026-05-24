@@ -14,6 +14,11 @@ urlpatterns = [
         name="refresh_weather",
     ),
     path(
+        "climate/calculate/<int:photo_id>/",
+        views.calculate_climate_norm,
+        name="calculate_climate_norm",
+    ),
+    path(
         "delete/<int:photo_id>/", views.delete_photo, name="delete_photo"
     ),  # новый маршрут
 ]
