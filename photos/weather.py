@@ -1,16 +1,16 @@
 import requests
-from datetime import datetime, timezone
+from datetime import datetime
+
 
 def fetch_weather_for_photo(latitude, longitude, taken_at):
     """
     Принимает широту, долготу и datetime съёмки.
-    Возвращает словарь с погодными данными или None при ошибке.
+    Возвращает ближайшие к времени съёмки hourly-данные или None при ошибке.
     """
     if latitude is None or longitude is None or taken_at is None:
         return None
 
-    # Open-Meteo ожидает дату в формате 'YYYY-MM-DD'
-    date_str = taken_at.strftime('%Y-%m-%d')
+    date_str = taken_at.date().isoformat()
 
     url = 'https://archive-api.open-meteo.com/v1/archive'
     params = {
@@ -18,12 +18,7 @@ def fetch_weather_for_photo(latitude, longitude, taken_at):
         'longitude': longitude,
         'start_date': date_str,
         'end_date': date_str,
-        'daily': [
-            'temperature_2m_max',
-            'temperature_2m_min',
-            'precipitation_sum',
-            'weathercode'
-        ],
+        'hourly': 'temperature_2m,precipitation,weather_code',
         'timezone': 'auto'
     }
 
@@ -31,23 +26,32 @@ def fetch_weather_for_photo(latitude, longitude, taken_at):
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
-        print("Open-Meteo response:", data)
-        
-        daily = data.get('daily', {})
+        hourly = data.get('hourly', {})
 
-        # Извлекаем значения (они приходят списками, берём первый элемент)
-        max_temp = daily.get('temperature_2m_max', [None])[0]
-        min_temp = daily.get('temperature_2m_min', [None])[0]
-        precip = daily.get('precipitation_sum', [None])[0]
-        weathercode = daily.get('weathercode', [None])[0]
+        times = hourly.get('time') or []
+        temperatures = hourly.get('temperature_2m') or []
+        precipitations = hourly.get('precipitation') or []
+        weather_codes = hourly.get('weather_code') or []
+
+        if not times:
+            return None
+
+        taken_at_naive = taken_at.replace(tzinfo=None)
+        nearest_index = min(
+            range(len(times)),
+            key=lambda index: abs(
+                datetime.fromisoformat(times[index]) - taken_at_naive
+            ),
+        )
 
         return {
-            'temperature_max': max_temp,
-            'temperature_min': min_temp,
-            'precipitation': precip,
-            'weathercode': weathercode
+            'source': 'hourly',
+            'temperature': temperatures[nearest_index],
+            'precipitation': precipitations[nearest_index],
+            'weathercode': weather_codes[nearest_index],
+            'weather_time': times[nearest_index],
         }
-    except requests.RequestException as e:
+    except (requests.RequestException, ValueError, IndexError) as e:
         # В реальном проекте лучше логировать ошибки
         print(f'Ошибка запроса погоды: {e}')
         return None

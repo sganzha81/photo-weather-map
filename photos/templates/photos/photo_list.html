@@ -415,12 +415,64 @@
             }
         }
 
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function isPresent(value) {
+            return value !== null && value !== undefined && value !== '';
+        }
+
+        function formatWeather(props) {
+            const emoji = props.weather_emoji || '🌡️';
+            const label = props.weather_label || 'Нет данных';
+            const cssClass = props.weather_css_class || 'unknown';
+            const lines = [
+                `<div><strong>${escapeHtml(emoji)} ${escapeHtml(label)}</strong></div>`
+            ];
+
+            if (props.weather_source === 'hourly') {
+                if (isPresent(props.weather_temperature)) {
+                    lines.push(`<div>Температура: ${escapeHtml(props.weather_temperature)} °C</div>`);
+                }
+                if (isPresent(props.weather_precipitation)) {
+                    lines.push(`<div>Осадки за час: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                }
+                if (isPresent(props.weather_time_display)) {
+                    lines.push(`<div>Данные за: ${escapeHtml(props.weather_time_display)}</div>`);
+                }
+            } else if (props.weather_source === 'daily') {
+                const hasMax = isPresent(props.weather_temperature_max);
+                const hasMin = isPresent(props.weather_temperature_min);
+                if (hasMax || hasMin) {
+                    lines.push(
+                        `<div>Температура: ${hasMax ? escapeHtml(props.weather_temperature_max) : '?'} / ${hasMin ? escapeHtml(props.weather_temperature_min) : '?'} °C</div>`
+                    );
+                }
+                if (isPresent(props.weather_precipitation)) {
+                    lines.push(`<div>Осадки: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                }
+            }
+
+            if (lines.length === 1 && label === 'Нет данных') {
+                return `<div class="weather-info weather-${escapeHtml(cssClass)}">Нет данных</div>`;
+            }
+
+            return `<div class="weather-info weather-${escapeHtml(cssClass)}">${lines.join('')}</div>`;
+        }
+
         function openPhotoPopup(feature) {
             const props = feature.getProperties();
             const lonLat = feature.get('lonLat') || feature.getGeometry().getCoordinates();
             const id = props.id;
             const date = props.date;
-            const weather = props.weather;
+            const weather = formatWeather(props);
             const imageUrl = props.image_url;
 
             // Строим HTML попапа
@@ -430,7 +482,7 @@
                     <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
                     <b>${date}</b><br>
                     <img src="${imageUrl}" alt="Фото">
-                    <div class="weather-info">${weather}</div>
+                    ${weather}
                     <div class="place-info" id="place-${id}">Загрузка места...</div>
                     <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
                     <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>

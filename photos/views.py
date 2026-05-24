@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import requests
 
 from django.contrib import messages
@@ -11,6 +13,17 @@ from django.views.decorators.http import require_POST
 from .forms import PhotoEditForm
 from .models import Photo
 from .weather import fetch_weather_for_photo
+from .weather_codes import get_weather_info
+
+
+def format_weather_time(weather_time):
+    if not weather_time:
+        return None
+
+    try:
+        return datetime.strptime(weather_time, "%Y-%m-%dT%H:%M").strftime("%d.%m.%Y, %H:%M")
+    except (TypeError, ValueError):
+        return weather_time
 
 
 @login_required
@@ -52,38 +65,6 @@ def upload_photo(request):
             return redirect("photo_list")
 
     return render(request, "photos/upload.html")
-
-
-def get_weather_emoji(weathercode):
-    """Возвращает строку с эмодзи и кратким описанием погоды по коду Open-Meteo."""
-    mapping = {
-        0: ("☀️", "Ясно"),
-        1: ("🌤️", "Преимущественно ясно"),
-        2: ("⛅", "Переменная облачность"),
-        3: ("☁️", "Пасмурно"),
-        45: ("🌫️", "Туман"),
-        48: ("🌫️", "Изморозь"),
-        51: ("🌦️", "Лёгкая морось"),
-        53: ("🌧️", "Морось"),
-        55: ("🌧️", "Сильная морось"),
-        61: ("🌧️", "Слабый дождь"),
-        63: ("🌧️", "Дождь"),
-        65: ("🌧️", "Сильный дождь"),
-        71: ("❄️", "Слабый снег"),
-        73: ("❄️", "Снег"),
-        75: ("❄️", "Сильный снег"),
-        77: ("🌨️", "Снежные зёрна"),
-        80: ("🌦️", "Кратковременный дождь"),
-        81: ("🌧️", "Ливень"),
-        82: ("🌧️", "Очень сильный ливень"),
-        85: ("❄️", "Снегопад"),
-        86: ("❄️", "Сильный снегопад"),
-        95: ("⛈️", "Гроза"),
-        96: ("⛈️", "Гроза с градом"),
-        99: ("⛈️", "Сильная гроза с градом"),
-    }
-    emoji, desc = mapping.get(weathercode, ("🌈", "Неизвестно"))
-    return f"{emoji} {desc}"
 
 
 @login_required
@@ -132,22 +113,36 @@ def photos_geojson(request):
             continue
 
         w = photo.weather_data or {}
-        temp_max = w.get('temperature_max')
-        temp_min = w.get('temperature_min')
-        precip = w.get('precipitation')
-        weathercode = w.get('weathercode')
+        weather_info = get_weather_info(w.get("weathercode"))
+        weather_source = None
+        weather_temperature = None
+        weather_temperature_max = None
+        weather_temperature_min = None
+        weather_precipitation = None
+        weather_time = None
 
-        weather_parts = []
-        weather_emoji = get_weather_emoji(weathercode) if weathercode is not None else ""
-        if weather_emoji:
-            weather_parts.append(weather_emoji)
-        if temp_max is not None:
-            weather_parts.append(f"Макс {temp_max}°C")
-        if temp_min is not None:
-            weather_parts.append(f"Мин {temp_min}°C")
-        if precip is not None and precip > 0:
-            weather_parts.append(f"Осадки {precip} мм")
-        weather_str = " · ".join(weather_parts) if weather_parts else "Нет данных"
+        if w.get("source") == "hourly":
+            weather_source = "hourly"
+            weather_temperature = w.get("temperature")
+            weather_precipitation = w.get("precipitation")
+            weather_time = w.get("weather_time")
+        elif w:
+            weather_source = "daily"
+            weather_temperature_max = w.get("temperature_max")
+            weather_temperature_min = w.get("temperature_min")
+            weather_precipitation = w.get("precipitation")
+
+        weather_parts = [f"{weather_info['emoji']} {weather_info['label']}"]
+        if weather_source == "hourly" and weather_temperature is not None:
+            weather_parts.append(f"{weather_temperature}°C")
+        elif weather_source == "daily":
+            if weather_temperature_max is not None:
+                weather_parts.append(f"Макс {weather_temperature_max}°C")
+            if weather_temperature_min is not None:
+                weather_parts.append(f"Мин {weather_temperature_min}°C")
+        if weather_precipitation is not None:
+            weather_parts.append(f"Осадки {weather_precipitation} мм")
+        weather_str = " · ".join(weather_parts) if w else "Нет данных"
 
         taken = photo.taken_at or photo.uploaded_at
         date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
@@ -162,6 +157,16 @@ def photos_geojson(request):
                 "id": photo.id,
                 "date": date_str,
                 "weather": weather_str,
+                "weather_emoji": weather_info["emoji"],
+                "weather_label": weather_info["label"],
+                "weather_css_class": weather_info["css_class"],
+                "weather_source": weather_source,
+                "weather_temperature": weather_temperature,
+                "weather_temperature_max": weather_temperature_max,
+                "weather_temperature_min": weather_temperature_min,
+                "weather_precipitation": weather_precipitation,
+                "weather_time": weather_time,
+                "weather_time_display": format_weather_time(weather_time),
                 "image_url": photo.image.url if photo.image else "",
             }
         }
@@ -240,6 +245,11 @@ def user_photos(request):
         photos = photos.filter(weather_data__isnull=True)
     else:
         active_status = "all"
+
+    for photo in photos:
+        weather_data = photo.weather_data or {}
+        photo.weather_info = get_weather_info(weather_data.get("weathercode"))
+        photo.weather_time_display = format_weather_time(weather_data.get("weather_time"))
 
     return render(
         request,

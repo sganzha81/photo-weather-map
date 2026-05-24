@@ -456,11 +456,21 @@
                                     <div class="meta-value weather-text">
                                         {% if photo.weather_data %}
                                             {% with weather=photo.weather_data %}
-                                                {% if weather.temperature_max is None and weather.temperature_min is None and weather.precipitation is None %}
-                                                    Нет данных
+                                                <strong>{{ photo.weather_info.emoji }} {{ photo.weather_info.label }}</strong>
+
+                                                {% if weather.source == "hourly" %}
+                                                    {% if weather.temperature is not None %}
+                                                        <br>Температура: {{ weather.temperature|floatformat:1 }} °C
+                                                    {% endif %}
+                                                    {% if weather.precipitation is not None %}
+                                                        <br>Осадки за час: {{ weather.precipitation|floatformat:1 }} мм
+                                                    {% endif %}
+                                                    {% if photo.weather_time_display %}
+                                                        <br>Данные за: {{ photo.weather_time_display }}
+                                                    {% endif %}
                                                 {% else %}
-                                                    🌦
                                                     {% if weather.temperature_max is not None or weather.temperature_min is not None %}
+                                                        <br>Температура:
                                                         {% if weather.temperature_max is not None %}
                                                             {{ weather.temperature_max|floatformat:0 }}
                                                         {% else %}
@@ -476,8 +486,7 @@
                                                     {% endif %}
 
                                                     {% if weather.precipitation is not None %}
-                                                        {% if weather.temperature_max is not None or weather.temperature_min is not None %}, {% endif %}
-                                                        осадки: {{ weather.precipitation|floatformat:1 }} мм
+                                                        <br>Осадки: {{ weather.precipitation|floatformat:1 }} мм
                                                     {% endif %}
                                                 {% endif %}
                                             {% endwith %}
