@@ -104,7 +104,13 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+            margin: 0 0 12px;
+        }
+
+        .photo-summary {
             margin: 0 0 22px;
+            color: #475569;
+            font-weight: 700;
         }
 
         .filter-link {
@@ -372,6 +378,10 @@
                 gap: 8px;
             }
 
+            .photo-summary {
+                margin-bottom: 18px;
+            }
+
             .filter-link {
                 min-height: 42px;
             }
@@ -452,6 +462,10 @@
             </a>
         </nav>
 
+        <div class="photo-summary">
+            Всего фото: {{ total_photo_count }} · Занято: {{ total_file_size_display }}
+        </div>
+
         {% if photos %}
             <section class="photo-grid" aria-label="Список фотографий">
                 {% for photo in photos %}
@@ -476,6 +490,11 @@
                                 <div class="meta-row">
                                     <div class="meta-label">Дата загрузки</div>
                                     <div class="meta-value">{{ photo.uploaded_at|date:"d.m.Y H:i" }}</div>
+                                </div>
+
+                                <div class="meta-row">
+                                    <div class="meta-label">Размер файла</div>
+                                    <div class="meta-value">{{ photo.file_size_display }}</div>
                                 </div>
 
                                 <div class="meta-row">

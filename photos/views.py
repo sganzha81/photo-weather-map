@@ -7,11 +7,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.views.decorators.http import require_POST
 
 from .forms import PhotoEditForm
 from .climate import fetch_climate_comparison_for_photo
+from .file_utils import format_file_size
 from .models import Photo
 from .weather import fetch_weather_for_photo
 from .weather_codes import get_weather_info
@@ -227,6 +228,7 @@ def user_photos(request):
     active_status = request.GET.get("status", "all")
     base_photos = Photo.objects.filter(user=request.user)
     photos = base_photos.order_by("-uploaded_at")
+    total_file_size = base_photos.aggregate(total=Sum("file_size"))["total"] or 0
 
     filter_counts = {
         "all": base_photos.count(),
@@ -256,6 +258,7 @@ def user_photos(request):
         weather_data = photo.weather_data or {}
         photo.weather_info = get_weather_info(weather_data.get("weathercode"))
         photo.weather_time_display = format_weather_time(weather_data.get("weather_time"))
+        photo.file_size_display = format_file_size(photo.file_size)
 
     return render(
         request,
@@ -264,6 +267,8 @@ def user_photos(request):
             "photos": photos,
             "active_status": active_status,
             "filter_counts": filter_counts,
+            "total_file_size_display": format_file_size(total_file_size),
+            "total_photo_count": filter_counts["all"],
         },
     )
 

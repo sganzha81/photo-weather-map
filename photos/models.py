@@ -320,6 +320,18 @@ class Photo(models.Model):
     weather_data = models.JSONField(null=True, blank=True)
     climate_data = models.JSONField(null=True, blank=True)
     exif_raw = models.JSONField(null=True, blank=True)
+    file_size = models.PositiveBigIntegerField(
+        null=True, blank=True, verbose_name="Размер файла"
+    )
+
+    def set_file_size_from_image(self):
+        if not self.image or self.file_size is not None:
+            return
+
+        try:
+            self.file_size = self.image.size
+        except Exception as e:
+            print(f"Не удалось определить размер файла: {type(e).__name__}: {e}")
 
     def clean(self):
         if self.image and not self.pk:
@@ -421,9 +433,18 @@ class Photo(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+        self.set_file_size_from_image()
+
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields = set(update_fields)
+            if self.file_size is not None:
+                update_fields.add("file_size")
+            kwargs["update_fields"] = update_fields
 
         if (
-            self.latitude is not None
+            update_fields is None
+            and self.latitude is not None
             and self.longitude is not None
             and self.taken_at is not None
             and not self.weather_data
