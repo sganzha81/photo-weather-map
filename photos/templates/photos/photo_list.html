@@ -307,17 +307,21 @@
 
         // ---------- 3. Векторный слой для фотографий ----------
         const regularPhotoStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 8,
-                fill: new ol.style.Fill({ color: '#4a90e2' }),
-                stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.55
             })
         });
         const selectedPhotoStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 11,
-                fill: new ol.style.Fill({ color: '#f97316' }),
-                stroke: new ol.style.Stroke({ color: 'white', width: 3 })
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.65
             })
         });
         let selectedFeature = null;
