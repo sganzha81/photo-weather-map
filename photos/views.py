@@ -14,6 +14,7 @@ from .forms import PhotoEditForm
 from .climate import fetch_climate_comparison_for_photo
 from .file_utils import format_file_size
 from .models import Photo
+from .site_settings import get_user_storage_limit_bytes
 from .weather import fetch_weather_for_photo
 from .weather_codes import get_weather_info
 
@@ -34,6 +35,28 @@ def upload_photo(request):
         image_files = request.FILES.getlist("image")
         if not image_files:
             messages.error(request, "Пожалуйста, выберите хотя бы один файл.")
+            return render(request, "photos/upload.html")
+
+        current_total = (
+            Photo.objects.filter(user=request.user).aggregate(total=Sum("file_size"))[
+                "total"
+            ]
+            or 0
+        )
+        upload_total = sum(
+            getattr(image_file, "size", 0) or 0 for image_file in image_files
+        )
+        storage_limit = get_user_storage_limit_bytes()
+
+        if current_total + upload_total > storage_limit:
+            messages.error(
+                request,
+                (
+                    "Недостаточно места для загрузки. Сейчас занято "
+                    f"{format_file_size(current_total)} из {format_file_size(storage_limit)}. "
+                    f"Вы выбрали файлов на {format_file_size(upload_total)}."
+                ),
+            )
             return render(request, "photos/upload.html")
 
         success_count = 0
@@ -229,6 +252,19 @@ def user_photos(request):
     base_photos = Photo.objects.filter(user=request.user)
     photos = base_photos.order_by("-uploaded_at")
     total_file_size = base_photos.aggregate(total=Sum("file_size"))["total"] or 0
+    storage_limit = get_user_storage_limit_bytes()
+    storage_usage_percent = (
+        round((total_file_size / storage_limit) * 100, 1) if storage_limit else 0
+    )
+    storage_usage_bar_percent = min(storage_usage_percent, 100)
+    storage_usage_bar_percent_css = f"{storage_usage_bar_percent:.1f}".rstrip(
+        "0"
+    ).rstrip(".")
+    storage_usage_status = "ok"
+    if storage_usage_percent >= 100:
+        storage_usage_status = "full"
+    elif storage_usage_percent >= 90:
+        storage_usage_status = "warning"
 
     filter_counts = {
         "all": base_photos.count(),
@@ -269,6 +305,11 @@ def user_photos(request):
             "filter_counts": filter_counts,
             "total_file_size_display": format_file_size(total_file_size),
             "total_photo_count": filter_counts["all"],
+            "storage_limit_display": format_file_size(storage_limit),
+            "storage_used_display": format_file_size(total_file_size),
+            "storage_usage_percent": storage_usage_percent,
+            "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
+            "storage_usage_status": storage_usage_status,
         },
     )
 

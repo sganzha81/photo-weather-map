@@ -8,7 +8,7 @@ from django.db.models import Sum
 from django.utils.html import format_html
 
 from .file_utils import format_file_size
-from .models import Photo
+from .models import Photo, SiteSettings
 
 
 class HasGeoFilter(admin.SimpleListFilter):
@@ -145,6 +145,17 @@ class PhotoAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="Норма")
     def has_climate(self, obj):
         return bool(obj.climate_data)
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    list_display = ("user_storage_limit_mb", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        if SiteSettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
 
 
 try:

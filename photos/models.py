@@ -471,3 +471,18 @@ class Photo(models.Model):
             storage.delete(path)
         # Затем вызываем стандартное удаление, чтобы запись исчезла из БД
         super().delete(*args, **kwargs)
+
+
+class SiteSettings(models.Model):
+    user_storage_limit_mb = models.PositiveIntegerField(
+        default=100,
+        verbose_name="Лимит хранилища на пользователя, МБ",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Настройки сайта"
+        verbose_name_plural = "Настройки сайта"
+
+    def __str__(self):
+        return "Настройки сайта"

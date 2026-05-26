@@ -108,9 +108,50 @@
         }
 
         .photo-summary {
-            margin: 0 0 22px;
+            margin: 0 0 10px;
             color: #475569;
             font-weight: 700;
+        }
+
+        .storage-meter {
+            margin: 0 0 22px;
+        }
+
+        .storage-meter-track {
+            overflow: hidden;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+        }
+
+        .storage-meter-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: #2563eb;
+        }
+
+        .storage-meter-warning .storage-meter-fill {
+            background: #d97706;
+        }
+
+        .storage-meter-full .storage-meter-fill {
+            background: #dc2626;
+        }
+
+        .storage-meter-note {
+            margin-top: 7px;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .storage-meter-warning .storage-meter-note {
+            color: #92400e;
+        }
+
+        .storage-meter-full .storage-meter-note {
+            color: #991b1b;
         }
 
         .filter-link {
@@ -463,7 +504,16 @@
         </nav>
 
         <div class="photo-summary">
-            Всего фото: {{ total_photo_count }} · Занято: {{ total_file_size_display }}
+            Всего фото: {{ total_photo_count }} · Занято: {{ storage_used_display }} из {{ storage_limit_display }}
+        </div>
+
+        <div class="storage-meter storage-meter-{{ storage_usage_status }}" aria-label="Использование хранилища">
+            <div class="storage-meter-track">
+                <div class="storage-meter-fill" style="width: {{ storage_usage_bar_percent_css }}%;"></div>
+            </div>
+            <div class="storage-meter-note">
+                Использовано {{ storage_usage_percent }}%
+            </div>
         </div>
 
         {% if photos %}
