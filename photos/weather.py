@@ -1,5 +1,9 @@
+import logging
+
 import requests
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_weather_for_photo(latitude, longitude, taken_at):
@@ -52,6 +56,5 @@ def fetch_weather_for_photo(latitude, longitude, taken_at):
             'weather_time': times[nearest_index],
         }
     except (requests.RequestException, ValueError, IndexError) as e:
-        # В реальном проекте лучше логировать ошибки
-        print(f'Ошибка запроса погоды: {e}')
+        logger.warning("Ошибка запроса погоды: %s", e)
         return None

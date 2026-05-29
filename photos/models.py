@@ -1,6 +1,7 @@
 import json
 import io, os
 import hashlib
+import logging
 
 from datetime import datetime
 
@@ -16,6 +17,8 @@ from PIL import Image, ExifTags
 from PIL.ExifTags import TAGS, GPSTAGS
 
 from .weather import fetch_weather_for_photo
+
+logger = logging.getLogger(__name__)
 
 EXIF_IFD_TAG = 34665
 GPS_IFD_TAG = 34853
@@ -149,7 +152,7 @@ def extract_gps(exif_data):
         lon = dms_to_decimal(lon_dms, lon_ref)
         return lat, lon
     except Exception as e:
-        print(f"Ошибка преобразования GPS: {e}")
+        logger.warning("Ошибка преобразования GPS: %s", e)
         return None, None
 
 
@@ -175,7 +178,7 @@ def get_exif_data(image, file_bytes=None):
     try:
         exif = image.getexif()
     except Exception as e:
-        print(f"Ошибка image.getexif(): {e}")
+        logger.warning("Ошибка image.getexif(): %s", e)
         return exif_dict
 
     if not exif:
@@ -202,7 +205,7 @@ def get_exif_data(image, file_bytes=None):
             tag_name = TAGS.get(tag_id, tag_id)
             exif_dict[tag_name] = value
     except Exception as e:
-        print(f"Не удалось прочитать EXIF IFD: {e}")
+        logger.warning("Не удалось прочитать EXIF IFD: %s", e)
 
     # 3. Вложенный GPS IFD — там лежат координаты
     try:
@@ -217,7 +220,7 @@ def get_exif_data(image, file_bytes=None):
             exif_dict["GPSInfo"] = gps_data
 
     except Exception as e:
-        print(f"Не удалось прочитать GPS IFD: {e}")
+        logger.warning("Не удалось прочитать GPS IFD: %s", e)
 
     return exif_dict
 
@@ -281,7 +284,7 @@ def extract_metadata_from_heif(file_bytes):
         return latitude, longitude, taken_at
 
     except Exception as e:
-        print(f"Ошибка извлечения метаданных из HEIC: {e}")
+        logger.warning("Ошибка извлечения метаданных из HEIC: %s", e)
         return None, None, None
 
 
@@ -331,7 +334,11 @@ class Photo(models.Model):
         try:
             self.file_size = self.image.size
         except Exception as e:
-            print(f"Не удалось определить размер файла: {type(e).__name__}: {e}")
+            logger.warning(
+                "Не удалось определить размер файла: %s: %s",
+                type(e).__name__,
+                e,
+            )
 
     def clean(self):
         if self.image and not self.pk:
@@ -371,7 +378,7 @@ class Photo(models.Model):
                         file_bytes = self.image.read()
                         self.image.seek(0)
                     except Exception as e:
-                        print(f"Ошибка конвертации HEIC в JPEG: {e}")
+                        logger.warning("Ошибка конвертации HEIC в JPEG: %s", e)
 
                 # --- 2. Побайтовый хэш всего файла (теперь JPEG) ---
                 self.file_hash = hashlib.sha256(file_bytes).hexdigest()
@@ -429,7 +436,11 @@ class Photo(models.Model):
             except ValidationError:
                 raise
             except Exception as e:
-                print(f"Ошибка обработки фото: {type(e).__name__}: {e}")
+                logger.warning(
+                    "Ошибка обработки фото: %s: %s",
+                    type(e).__name__,
+                    e,
+                )
 
     def save(self, *args, **kwargs):
         self.clean()
