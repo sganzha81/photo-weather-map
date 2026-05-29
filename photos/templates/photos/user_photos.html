@@ -280,6 +280,16 @@
             color: #92400e;
         }
 
+        .status-public {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .status-private {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
         .weather-text {
             line-height: 1.4;
         }
@@ -563,6 +573,12 @@
 
                                             {% if not photo.weather_data %}
                                                 <li class="status status-warning">⚠️ Нет погоды</li>
+                                            {% endif %}
+
+                                            {% if photo.is_public %}
+                                                <li class="status status-public">Публичное</li>
+                                            {% else %}
+                                                <li class="status status-private">Приватное</li>
                                             {% endif %}
                                         </ul>
                                     </div>

@@ -198,6 +198,7 @@ def photos_geojson(request):
                 "climate_comparison_text": climate_data.get("comparison_text"),
                 "climate_source": climate_data.get("source"),
                 "image_url": photo.image.url if photo.image else "",
+                "is_public": photo.is_public,
             }
         }
         features.append(feature)

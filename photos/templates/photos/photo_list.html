@@ -315,6 +315,15 @@
                 scale: 0.55
             })
         });
+        const publicPhotoStyle = new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin-public.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.55
+            })
+        });
         const selectedPhotoStyle = new ol.style.Style({
             image: new ol.style.Icon({
                 src: "{% static 'photos/brand/map-pin.svg' %}",
@@ -324,7 +333,24 @@
                 scale: 0.65
             })
         });
+        const selectedPublicPhotoStyle = new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin-public.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.65
+            })
+        });
         let selectedFeature = null;
+
+        function getPhotoStyle(feature) {
+            return feature.get("is_public") ? publicPhotoStyle : regularPhotoStyle;
+        }
+
+        function getSelectedPhotoStyle(feature) {
+            return feature.get("is_public") ? selectedPublicPhotoStyle : selectedPhotoStyle;
+        }
 
         const vectorSource = new ol.source.Vector({
             url: '/photos/data.json',
@@ -332,7 +358,7 @@
         });
         const vectorLayer = new ol.layer.Vector({
             source: vectorSource,
-            style: regularPhotoStyle
+            style: getPhotoStyle
         });
         map.addLayer(vectorLayer);
 
@@ -427,11 +453,11 @@
 
         function selectFeature(feature) {
             if (selectedFeature && selectedFeature !== feature) {
-                selectedFeature.setStyle(regularPhotoStyle);
+                selectedFeature.setStyle(getPhotoStyle(selectedFeature));
             }
             selectedFeature = feature;
             if (selectedFeature) {
-                selectedFeature.setStyle(selectedPhotoStyle);
+                selectedFeature.setStyle(getSelectedPhotoStyle(selectedFeature));
             }
         }
 
@@ -587,7 +613,7 @@
                 const lonLat = feature.getGeometry().getCoordinates();
                 // Сохраняем координаты для оверлея
                 feature.set('lonLat', lonLat);
-                feature.setStyle(regularPhotoStyle);
+                feature.setStyle(getPhotoStyle(feature));
             });
 
             if (targetPhotoId) {

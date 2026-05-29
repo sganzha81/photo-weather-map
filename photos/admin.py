@@ -80,11 +80,13 @@ class PhotoAdmin(admin.ModelAdmin):
         "has_geo",
         "has_weather",
         "has_climate",
+        "is_public",
     )
     list_filter = (
         "uploaded_at",
         "taken_at",
         "user",
+        "is_public",
         HasGeoFilter,
         HasWeatherFilter,
         HasClimateFilter,

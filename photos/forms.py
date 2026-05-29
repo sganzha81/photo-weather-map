@@ -7,7 +7,7 @@ from .models import Photo
 class PhotoEditForm(forms.ModelForm):
     class Meta:
         model = Photo
-        fields = ["taken_at", "latitude", "longitude"]
+        fields = ["taken_at", "latitude", "longitude", "is_public"]
         widgets = {
             "taken_at": forms.DateTimeInput(
                 attrs={"type": "datetime-local"},
@@ -15,6 +15,7 @@ class PhotoEditForm(forms.ModelForm):
             ),
             "latitude": forms.HiddenInput(),
             "longitude": forms.HiddenInput(),
+            "is_public": forms.CheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):

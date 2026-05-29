@@ -326,6 +326,7 @@ class Photo(models.Model):
     file_size = models.PositiveBigIntegerField(
         null=True, blank=True, verbose_name="Размер файла"
     )
+    is_public = models.BooleanField(default=False, verbose_name="Публичное фото")
 
     def set_file_size_from_image(self):
         if not self.image or self.file_size is not None:
