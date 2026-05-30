@@ -283,7 +283,7 @@
         document.body.appendChild(popupElement);
         const popupOverlay = new ol.Overlay({
             element: popupElement,
-            autoPan: true,
+            autoPan: false,
             positioning: 'bottom-center'
         });
         map.addOverlay(popupOverlay);
@@ -448,9 +448,10 @@
             return `<div class="climate-info">${lines.join('')}</div>`;
         }
 
-        function openPhotoPopup(feature) {
+        function openPhotoPopup(feature, options = {}) {
+            const panIntoView = options.panIntoView === true;
             const props = feature.getProperties();
-            const lonLat = feature.get('lonLat') || feature.getGeometry().getCoordinates();
+            const lonLat = feature.getGeometry().getCoordinates();
             const id = props.id;
             const date = props.date;
             const weather = formatWeather(props);
@@ -476,6 +477,9 @@
             applyPopupDragOffset();
             popupElement.style.display = 'block';
             popupOverlay.setPosition(lonLat);
+            if (panIntoView) {
+                popupOverlay.panIntoView();
+            }
             selectFeature(feature);
 
             // Запрашиваем место через Nominatim (как и раньше)
@@ -530,9 +534,11 @@
                 });
 
                 if (targetFeature) {
-                    const lonLat = targetFeature.get('lonLat');
+                    // Deep links by photo_id focus the feature geometry coordinate directly.
+                    // Do not apply pixel offsets: the pin anchor [0.5, 1] already marks this point.
+                    const coordinate = targetFeature.getGeometry().getCoordinates();
                     map.getView().animate({
-                        center: lonLat,
+                        center: coordinate,
                         zoom: 12,
                         duration: 400
                     });
@@ -547,7 +553,7 @@
                 return feature;
             });
             if (feature) {
-                openPhotoPopup(feature);
+                openPhotoPopup(feature, { panIntoView: true });
             } else {
                 closePopup();
             }
