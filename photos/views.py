@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 from django.views.decorators.http import require_POST
+from django.templatetags.static import static
 from django.urls import reverse
 
 from .forms import PhotoEditForm
@@ -224,6 +225,18 @@ def public_user_map(request, username):
         latitude__isnull=False,
         longitude__isnull=False,
     ).count()
+    public_map_url = request.build_absolute_uri(request.path)
+    og_title = f"Публичная карта @{public_user.username} в Weatherpins"
+    if public_photo_count > 0:
+        og_description = (
+            f"{public_photo_count} публичных фото на карте с погодой в момент "
+            "съёмки и климатической нормой."
+        )
+    else:
+        og_description = "У пользователя пока нет публичных фото в Weatherpins."
+    og_image_url = request.build_absolute_uri(
+        static("photos/brand/weatherpins-icon-512.png")
+    )
 
     return render(
         request,
@@ -231,6 +244,10 @@ def public_user_map(request, username):
         {
             "public_user": public_user,
             "public_photo_count": public_photo_count,
+            "public_map_url": public_map_url,
+            "og_title": og_title,
+            "og_description": og_description,
+            "og_image_url": og_image_url,
         },
     )
 

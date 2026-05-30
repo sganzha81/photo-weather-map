@@ -3,8 +3,19 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <title>Публичная карта {{ public_user.username }} — Weatherpins</title>
+    <title>{{ og_title }}</title>
+    <meta name="description" content="{{ og_description }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:url" content="{{ public_map_url }}">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <meta property="og:site_name" content="Weatherpins">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ og_title }}">
+    <meta name="twitter:description" content="{{ og_description }}">
+    <meta name="twitter:image" content="{{ og_image_url }}">
     <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
     <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
