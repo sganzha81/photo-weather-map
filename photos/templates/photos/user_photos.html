@@ -29,30 +29,6 @@
             padding: 24px 16px 40px;
         }
 
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            margin-bottom: 18px;
-            color: #2563eb;
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .top-nav {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-
-        .top-nav .back-link {
-            margin-bottom: 0;
-        }
-
         .brand-logo {
             display: block;
             max-width: 280px;
@@ -581,10 +557,7 @@
 </head>
 <body>
     <main class="page">
-        <nav class="top-nav" aria-label="Навигация">
-            <a href="{% url 'photo_list' %}" class="back-link">← На карту</a>
-            <a href="{% url 'profile' %}" class="back-link">Профиль</a>
-        </nav>
+        {% include "photos/includes/main_nav.html" %}
 
         <img
             src="{% static 'photos/brand/weatherpins-logo.png' %}"

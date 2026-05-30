@@ -20,82 +20,6 @@
         body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
         #map { width: 100vw; height: 100vh; }
 
-        /* Кнопка загрузки фото */
-        .map-actions {
-            position: absolute;
-            top: 12px;
-            left: 70px;
-            z-index: 1000;
-
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .map-action-btn {
-            width: 190px;
-            box-sizing: border-box;
-
-            display: block;
-            padding: 9px 12px;
-
-            border-radius: 8px;
-            text-align: center;
-            text-decoration: none;
-
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 16px;
-            font-weight: 600;
-            line-height: 1.2;
-
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        }
-
-        .upload-btn {
-            background: #4a90e2;
-        }
-
-        .my-photos-btn {
-            background: #4caf50;
-        }
-
-        @media (max-width: 600px) {
-            .map-actions {
-                top: 10px;
-                left: 64px;
-                gap: 6px;
-            }
-
-            .map-action-btn {
-                width: 165px;
-                font-size: 14px;
-                padding: 8px 10px;
-            }
-        }
-
-        /* Блок с именем пользователя и кнопкой Выйти */
-        .user-bar {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            background: rgba(255,255,255,0.9);
-            padding: 6px 12px;
-            border-radius: 8px;
-        }
-        .user-bar a {
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-        .user-bar a:hover {
-            text-decoration: underline;
-        }
-
         .popup-overlay {
             --drag-x: 0px;
             --drag-y: 0px;
@@ -250,27 +174,7 @@
 
     <div id="map"></div>
 
-    <!-- Кнопка Загрузить фото (только для авторизованных) -->
-    {% if user.is_authenticated %}
-        <div class="map-actions">
-            <a href="{% url 'upload_photo' %}" class="map-action-btn upload-btn">
-                📤 Загрузить фото
-            </a>
-
-            <a href="{% url 'user_photos' %}" class="map-action-btn my-photos-btn">
-                ← Мои фото
-            </a>
-        </div>
-        <div class="user-bar">
-            <span>{{ user.username }}</span>
-            <a href="{% url 'profile' %}">Профиль</a>
-            <a href="{% url 'logout' %}">Выйти</a>
-        </div>
-    {% else %}
-        <div class="user-bar">
-            <a href="{% url 'login' %}">Войти</a>
-        </div>
-    {% endif %}
+    {% include "photos/includes/main_nav.html" with main_nav_variant="map" %}
 
     <!-- Скрытое поле для CSRF-токена (нужно для удаления) -->
     {% csrf_token %}

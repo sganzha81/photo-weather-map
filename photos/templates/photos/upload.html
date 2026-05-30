@@ -30,24 +30,6 @@
             margin: 0 auto;
         }
 
-        .nav-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .nav-link {
-            color: #2563eb;
-            font-size: 16px;
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .nav-link:hover {
-            text-decoration: underline;
-        }
-
         .upload-card {
             width: 100%;
             background: #ffffff;
@@ -295,11 +277,7 @@
 </head>
 <body>
     <main class="page">
-        <nav class="nav-links" aria-label="Навигация">
-            <a href="{% url 'photo_list' %}" class="nav-link">← На карту</a>
-            <a href="{% url 'user_photos' %}" class="nav-link">Мои фото</a>
-            <a href="{% url 'profile' %}" class="nav-link">Профиль</a>
-        </nav>
+        {% include "photos/includes/main_nav.html" %}
 
         <section class="upload-card">
             <img
