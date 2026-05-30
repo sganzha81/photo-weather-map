@@ -25,3 +25,15 @@ Thumbs.db
 
 # Geany
 *.geany
+
+# Collected static files
+staticfiles/
+
+# Local AI/tool folders
+.codex/
+.agents/
+
+# Temporary/editor files
+*~
+*.bak
+*.tmp
