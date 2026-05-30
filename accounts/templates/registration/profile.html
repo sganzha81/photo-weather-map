@@ -1,0 +1,308 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Профиль — Weatherpins</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'photos/brand/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'photos/brand/site.webmanifest' %}">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 16px;
+        }
+
+        .profile-card {
+            width: 100%;
+            max-width: 760px;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 36px 34px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .brand-logo {
+            display: block;
+            max-width: 320px;
+            width: 80%;
+            height: auto;
+            margin: 0 auto 24px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 10px 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            text-align: center;
+            font-size: 42px;
+            line-height: 1.1;
+            font-weight: 800;
+        }
+
+        .user-name {
+            margin: 0;
+            color: #2563eb;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .user-email,
+        .joined-date {
+            margin: 8px 0 0;
+            color: #475569;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin: 24px 0 0;
+        }
+
+        .messages li {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid #dbe3ef;
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+        }
+
+        .message-success {
+            background-color: #dcfce7;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .section {
+            margin-top: 28px;
+        }
+
+        .section h2 {
+            margin: 0 0 14px;
+            font-size: 22px;
+            line-height: 1.2;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 13px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .stat-label {
+            color: #475569;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            color: #111827;
+            font-weight: 800;
+        }
+
+        .storage-summary {
+            margin: 0 0 10px;
+            color: #334155;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .storage-track {
+            overflow: hidden;
+            width: 100%;
+            height: 12px;
+            border-radius: 999px;
+            background: #e2e8f0;
+        }
+
+        .storage-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: #2563eb;
+        }
+
+        .storage-percent {
+            margin-top: 8px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .action-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #4a90e2;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .action-link:hover {
+            background: #3d7fc9;
+        }
+
+        .action-link-secondary {
+            background: #0f766e;
+        }
+
+        .action-link-secondary:hover {
+            background: #115e59;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                align-items: flex-start;
+                padding: 24px 14px;
+            }
+
+            .profile-card {
+                padding: 30px 20px;
+                border-radius: 16px;
+                box-shadow: none;
+            }
+
+            .brand-logo {
+                max-width: 260px;
+                margin-bottom: 20px;
+            }
+
+            h1 {
+                font-size: 36px;
+            }
+
+            .stats-grid,
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-item {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="profile-card">
+        <img
+            src="{% static 'photos/brand/weatherpins-logo.png' %}"
+            alt="Weatherpins"
+            class="brand-logo"
+        >
+        <h1>Профиль</h1>
+        <p class="user-name">@{{ request.user.username }}</p>
+        {% if request.user.email %}
+            <p class="user-email">{{ request.user.email }}</p>
+        {% endif %}
+        <p class="joined-date">Дата регистрации: {{ request.user.date_joined|date:"d.m.Y H:i" }}</p>
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li class="{% if 'success' in message.tags %}message-success{% endif %}">
+                        {{ message }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <section class="section" aria-labelledby="stats-title">
+            <h2 id="stats-title">Статистика</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Всего фото</span>
+                    <span class="stat-value">{{ stats.total_photos }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Публичных фото</span>
+                    <span class="stat-value">{{ stats.public_photos }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">На карте</span>
+                    <span class="stat-value">{{ stats.with_geo }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Без геоданных</span>
+                    <span class="stat-value">{{ stats.without_geo }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">С погодой</span>
+                    <span class="stat-value">{{ stats.with_weather }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">С климатической нормой</span>
+                    <span class="stat-value">{{ stats.with_climate }}</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="storage-title">
+            <h2 id="storage-title">Хранилище</h2>
+            <p class="storage-summary">
+                Занято: {{ storage_used_display }} из {{ storage_limit_display }}
+            </p>
+            <div class="storage-track" aria-label="Использование хранилища">
+                <div class="storage-fill" style="width: {{ storage_usage_bar_percent_css }}%;"></div>
+            </div>
+            <div class="storage-percent">Использовано {{ storage_usage_percent }}%</div>
+        </section>
+
+        <section class="section" aria-labelledby="actions-title">
+            <h2 id="actions-title">Быстрые действия</h2>
+            <div class="quick-actions">
+                <a href="{% url 'user_photos' %}" class="action-link">Мои фото</a>
+                <a href="{% url 'upload_photo' %}" class="action-link">Загрузить фото</a>
+                <a href="{% url 'photo_list' %}" class="action-link action-link-secondary">Моя карта</a>
+                <a href="{% url 'public_user_map' request.user.username %}" class="action-link action-link-secondary">Моя публичная карта</a>
+                <a href="{% url 'password_change' %}" class="action-link">Изменить пароль</a>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

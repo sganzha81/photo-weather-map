@@ -92,6 +92,9 @@
             color: #333;
             font-weight: bold;
         }
+        .user-bar a:hover {
+            text-decoration: underline;
+        }
 
         .popup-overlay {
             --drag-x: 0px;
@@ -260,6 +263,7 @@
         </div>
         <div class="user-bar">
             <span>{{ user.username }}</span>
+            <a href="{% url 'profile' %}">Профиль</a>
             <a href="{% url 'logout' %}">Выйти</a>
         </div>
     {% else %}
