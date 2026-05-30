@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 from django.views.decorators.http import require_POST
+from django.urls import reverse
 
 from .forms import PhotoEditForm
 from .climate import fetch_climate_comparison_for_photo
@@ -339,6 +340,15 @@ def user_photos(request):
         photo.weather_time_display = format_weather_time(weather_data.get("weather_time"))
         photo.file_size_display = format_file_size(photo.file_size)
 
+    public_photo_count = Photo.objects.filter(
+        user=request.user,
+        is_public=True,
+    ).count()
+
+    public_map_url = request.build_absolute_uri(
+        reverse("public_user_map", args=[request.user.username])
+    )
+
     return render(
         request,
         "photos/user_photos.html",
@@ -354,6 +364,8 @@ def user_photos(request):
             "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
             "storage_usage_status": storage_usage_status,
             "public_photo_count": public_photo_count,
+            "public_photo_count": public_photo_count,
+			"public_map_url": public_map_url,
         },
     )
 
