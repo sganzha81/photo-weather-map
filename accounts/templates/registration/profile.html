@@ -194,6 +194,34 @@
             background: #115e59;
         }
 
+        .onboarding-block {
+            margin-top: 28px;
+            padding: 20px;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .onboarding-block h2 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 22px;
+            line-height: 1.2;
+        }
+
+        .onboarding-block p {
+            margin: 0 0 16px;
+            color: #475569;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .onboarding-block .action-link {
+            width: auto;
+            min-width: 170px;
+        }
+
         @media (max-width: 640px) {
             body {
                 align-items: flex-start;
@@ -225,6 +253,10 @@
                 flex-direction: column;
                 gap: 6px;
             }
+
+            .onboarding-block .action-link {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -252,6 +284,17 @@
                     </li>
                 {% endfor %}
             </ul>
+        {% endif %}
+
+        {% if stats.total_photos == 0 %}
+            <section class="onboarding-block" aria-label="Начало работы">
+                <h2>Начните с первого фото</h2>
+                <p>
+                    После загрузки здесь появится статистика по вашим фото, хранилищу,
+                    публичной карте и погоде.
+                </p>
+                <a href="{% url 'upload_photo' %}" class="action-link">Загрузить фото</a>
+            </section>
         {% endif %}
 
         <section class="section" aria-labelledby="stats-title">

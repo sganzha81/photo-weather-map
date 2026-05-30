@@ -484,15 +484,31 @@
             text-align: center;
         }
 
+        .empty-state h2 {
+            margin: 0 0 10px;
+            color: #0f172a;
+            font-size: 24px;
+            line-height: 1.2;
+        }
+
         .empty-state p {
-            margin: 0 0 18px;
+            margin: 0 auto 18px;
             color: #475569;
-            font-size: 18px;
+            font-size: 17px;
+            line-height: 1.5;
+            max-width: 470px;
         }
 
         .empty-state .btn {
             width: auto;
             min-width: 170px;
+        }
+
+        .empty-hint {
+            margin-top: 18px;
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.45;
         }
 
         @media (max-width: 640px) {
@@ -812,17 +828,29 @@
             </section>
         {% else %}
             <section class="empty-state">
-                {% if active_status == 'all' %}
-                    <p>У вас пока нет загруженных фото.</p>
+                {% if total_photo_count == 0 %}
+                    <h2>У вас пока нет фото</h2>
+                    <p>
+                        Загрузите первое фото с геометкой, чтобы увидеть его на карте,
+                        получить погоду в момент съёмки и сравнить её с обычной погодой
+                        для этого места.
+                    </p>
                     <a href="{% url 'upload_photo' %}" class="btn btn-edit">Загрузить фото</a>
+                    <div class="empty-hint">
+                        Если в фото нет GPS-координат, вы сможете выбрать точку на карте вручную.
+                    </div>
                 {% elif active_status == 'on_map' %}
-                    <p>Нет фото с полными геоданными для отображения на карте.</p>
+                    <h2>Нет фото на карте</h2>
+                    <p>Добавьте координаты к фото, чтобы они появились на карте.</p>
                 {% elif active_status == 'no_geo' %}
-                    <p>Нет фото без геоданных.</p>
+                    <h2>Нет фото без геоданных</h2>
+                    <p>Отлично: у всех ваших фото уже есть координаты.</p>
                 {% elif active_status == 'no_date' %}
-                    <p>Нет фото без даты съёмки.</p>
+                    <h2>Нет фото без даты</h2>
+                    <p>Отлично: у всех ваших фото определена дата съёмки.</p>
                 {% elif active_status == 'no_weather' %}
-                    <p>Нет фото без данных о погоде.</p>
+                    <h2>Нет фото без погоды</h2>
+                    <p>Для всех подходящих фото погода уже получена.</p>
                 {% endif %}
             </section>
         {% endif %}

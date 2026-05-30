@@ -86,13 +86,26 @@
             bottom: 18px;
             z-index: 1000;
             width: min(360px, calc(100vw - 32px));
-            padding: 14px 16px;
-            border: 1px solid #bfdbfe;
-            border-radius: 8px;
-            background: rgba(239, 246, 255, 0.96);
-            color: #1e3a8a;
-            font-weight: 700;
+            padding: 18px 20px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #1f2933;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+        }
+
+        .empty-state h2 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 20px;
+            line-height: 1.2;
+        }
+
+        .empty-state p {
+            margin: 0;
+            color: #475569;
+            font-size: 15px;
+            line-height: 1.45;
         }
 
         .popup-card {
@@ -189,14 +202,25 @@
         <h1 class="map-title">Публичная карта пользователя: {{ public_user.username }}</h1>
         <div class="map-count">Публичных фото: {{ public_photo_count }}</div>
         {% if user.is_authenticated %}
-            <a href="{% url 'user_photos' %}" class="panel-link">← Мои фото</a>
+            {% if user == public_user %}
+                <a href="{% url 'user_photos' %}" class="panel-link">← Мои фото</a>
+            {% else %}
+                <a href="{% url 'photo_list' %}" class="panel-link">← На главную карту</a>
+            {% endif %}
         {% else %}
             <a href="{% url 'photo_list' %}" class="panel-link">← На главную карту</a>
         {% endif %}
     </section>
 
     {% if public_photo_count == 0 %}
-        <div class="empty-state">У пользователя пока нет публичных фото.</div>
+        <section class="empty-state" aria-live="polite">
+            <h2>У пользователя пока нет публичных фото</h2>
+            {% if user.is_authenticated and user == public_user %}
+                <p>Отметьте фото как публичные в разделе «Мои фото», чтобы они появились здесь.</p>
+            {% else %}
+                <p>Когда пользователь откроет фото для публичного просмотра, они появятся на этой карте.</p>
+            {% endif %}
+        </section>
     {% endif %}
 
     <script>
