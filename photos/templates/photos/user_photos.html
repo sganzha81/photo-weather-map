@@ -113,6 +113,35 @@
             font-weight: 700;
         }
 
+        .public-map-summary {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 14px;
+        }
+
+        .public-map-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #0f766e;
+            color: #ffffff;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .public-map-link:hover {
+            background: #115e59;
+        }
+
+        .public-map-count {
+            color: #475569;
+            font-weight: 700;
+        }
+
         .storage-meter {
             margin: 0 0 22px;
         }
@@ -479,6 +508,15 @@
         <div class="page-header">
             <h1>Мои фотографии</h1>
         </div>
+
+        {% if user.is_authenticated %}
+            <div class="public-map-summary">
+                <a href="{% url 'public_user_map' request.user.username %}" class="public-map-link">
+                    Моя публичная карта
+                </a>
+                <span class="public-map-count">{{ public_photo_count }} публичных фото</span>
+            </div>
+        {% endif %}
 
         {% if messages %}
             <ul class="messages">

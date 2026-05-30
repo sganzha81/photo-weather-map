@@ -1,0 +1,431 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Публичная карта {{ public_user.username }} — Weatherpins</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{% static 'photos/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'photos/brand/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'photos/brand/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'photos/brand/apple-touch-icon.png' %}">
+    <link rel="manifest" href="{% static 'photos/brand/site.webmanifest' %}">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.2.1/ol.css">
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.2.1/dist/ol.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: #172033;
+            background: #eef2f7;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .public-panel {
+            position: absolute;
+            top: 12px;
+            left: 70px;
+            z-index: 1000;
+            width: min(420px, calc(100vw - 92px));
+            padding: 12px 14px;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+        }
+
+        .brand {
+            margin: 0 0 4px;
+            color: #0f766e;
+            font-size: 18px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .map-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .map-count {
+            margin: 4px 0 10px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .panel-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 34px;
+            padding: 7px 10px;
+            border-radius: 7px;
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .empty-state {
+            position: absolute;
+            right: 16px;
+            bottom: 18px;
+            z-index: 1000;
+            width: min(360px, calc(100vw - 32px));
+            padding: 14px 16px;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            background: rgba(239, 246, 255, 0.96);
+            color: #1e3a8a;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+        }
+
+        .popup-card {
+            position: relative;
+            min-width: 210px;
+            max-width: 250px;
+            padding: 16px;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+        }
+
+        .popup-card img {
+            display: block;
+            max-width: 170px;
+            width: auto;
+            height: auto;
+            margin: 8px auto;
+            border-radius: 8px;
+        }
+
+        .popup-close-btn {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: #f0f0f0;
+            color: #333333;
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .weather-info {
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 8px;
+            background: #f5f7fa;
+            text-align: center;
+        }
+
+        .climate-info {
+            margin: 8px 0;
+            padding: 8px;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            background: #f0f9ff;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.35;
+        }
+
+        .place-info {
+            margin: 4px 0 0;
+            color: #555555;
+            font-style: italic;
+        }
+
+        @media (max-width: 640px) {
+            .public-panel {
+                top: 10px;
+                left: 58px;
+                width: calc(100vw - 70px);
+                padding: 10px 12px;
+            }
+
+            .brand {
+                font-size: 17px;
+            }
+
+            .map-title {
+                font-size: 15px;
+            }
+
+            .empty-state {
+                right: 12px;
+                bottom: 14px;
+                width: calc(100vw - 24px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <section class="public-panel" aria-label="Информация о публичной карте">
+        <p class="brand">Weatherpins</p>
+        <h1 class="map-title">Публичная карта пользователя: {{ public_user.username }}</h1>
+        <div class="map-count">Публичных фото: {{ public_photo_count }}</div>
+        {% if user.is_authenticated %}
+            <a href="{% url 'user_photos' %}" class="panel-link">← Мои фото</a>
+        {% else %}
+            <a href="{% url 'photo_list' %}" class="panel-link">← На главную карту</a>
+        {% endif %}
+    </section>
+
+    {% if public_photo_count == 0 %}
+        <div class="empty-state">У пользователя пока нет публичных фото.</div>
+    {% endif %}
+
+    <script>
+        const geojsonUrl = "{% url 'public_user_geojson' public_user.username %}";
+
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({
+                    source: new ol.source.OSM()
+                })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([37.62, 55.75]),
+                zoom: 4
+            })
+        });
+
+        const photoStyle = new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin-public.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.55
+            })
+        });
+
+        const selectedPhotoStyle = new ol.style.Style({
+            image: new ol.style.Icon({
+                src: "{% static 'photos/brand/map-pin-public.svg' %}",
+                anchor: [0.5, 1],
+                anchorXUnits: "fraction",
+                anchorYUnits: "fraction",
+                scale: 0.65
+            })
+        });
+
+        const vectorSource = new ol.source.Vector({
+            url: geojsonUrl,
+            format: new ol.format.GeoJSON()
+        });
+        const vectorLayer = new ol.layer.Vector({
+            source: vectorSource,
+            style: photoStyle
+        });
+        map.addLayer(vectorLayer);
+
+        const popupElement = document.createElement('div');
+        popupElement.style.display = 'none';
+        document.body.appendChild(popupElement);
+        const popupOverlay = new ol.Overlay({
+            element: popupElement,
+            autoPan: true,
+            positioning: 'bottom-center'
+        });
+        map.addOverlay(popupOverlay);
+
+        let selectedFeature = null;
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value).replace(/`/g, '&#096;');
+        }
+
+        function isPresent(value) {
+            return value !== null && value !== undefined && value !== '';
+        }
+
+        function formatWeather(props) {
+            const emoji = props.weather_emoji || '🌡️';
+            const label = props.weather_label || 'Нет данных';
+            const cssClass = props.weather_css_class || 'unknown';
+            const lines = [
+                `<div><strong>${escapeHtml(emoji)} ${escapeHtml(label)}</strong></div>`
+            ];
+
+            if (props.weather_source === 'hourly') {
+                if (isPresent(props.weather_temperature)) {
+                    lines.push(`<div>Температура: ${escapeHtml(props.weather_temperature)} °C</div>`);
+                }
+                if (isPresent(props.weather_precipitation)) {
+                    lines.push(`<div>Осадки за час: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                }
+                if (isPresent(props.weather_time_display)) {
+                    lines.push(`<div>Данные за: ${escapeHtml(props.weather_time_display)}</div>`);
+                }
+            } else if (props.weather_source === 'daily') {
+                const hasMax = isPresent(props.weather_temperature_max);
+                const hasMin = isPresent(props.weather_temperature_min);
+                if (hasMax || hasMin) {
+                    lines.push(
+                        `<div>Температура: ${hasMax ? escapeHtml(props.weather_temperature_max) : '?'} / ${hasMin ? escapeHtml(props.weather_temperature_min) : '?'} °C</div>`
+                    );
+                }
+                if (isPresent(props.weather_precipitation)) {
+                    lines.push(`<div>Осадки: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                }
+            }
+
+            if (lines.length === 1 && label === 'Нет данных') {
+                return `<div class="weather-info weather-${escapeHtml(cssClass)}">Нет данных</div>`;
+            }
+
+            return `<div class="weather-info weather-${escapeHtml(cssClass)}">${lines.join('')}</div>`;
+        }
+
+        function formatTemperature(value) {
+            if (!isPresent(value)) return '';
+            const numberValue = Number(value);
+            if (!Number.isFinite(numberValue)) {
+                return escapeHtml(value);
+            }
+            return `${numberValue > 0 ? '+' : ''}${numberValue.toFixed(1)}`;
+        }
+
+        function formatClimate(props) {
+            if (!isPresent(props.climate_comparison_text)) {
+                return '';
+            }
+
+            const lines = [
+                `<div>📊 ${escapeHtml(props.climate_comparison_text)}</div>`
+            ];
+
+            if (isPresent(props.climate_normal_temperature)) {
+                lines.push(
+                    `<div>Обычно: ${formatTemperature(props.climate_normal_temperature)} °C</div>`
+                );
+            }
+
+            return `<div class="climate-info">${lines.join('')}</div>`;
+        }
+
+        function closePopup() {
+            popupElement.style.display = 'none';
+            popupOverlay.setPosition(undefined);
+            if (selectedFeature) {
+                selectedFeature.setStyle(photoStyle);
+                selectedFeature = null;
+            }
+        }
+
+        function openPhotoPopup(feature) {
+            const props = feature.getProperties();
+            const lonLat = feature.get('lonLat') || feature.getGeometry().getCoordinates();
+            const id = props.id;
+            const html = `
+                <div class="popup-card">
+                    <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
+                    <b>${escapeHtml(props.date)}</b><br>
+                    <img src="${escapeAttribute(props.image_url)}" alt="Фото">
+                    ${formatWeather(props)}
+                    ${formatClimate(props)}
+                    <div class="place-info" id="place-${escapeAttribute(id)}">Загрузка места...</div>
+                </div>
+            `;
+
+            closePopup();
+            popupElement.innerHTML = html;
+            popupElement.style.display = 'block';
+            popupOverlay.setPosition(lonLat);
+            selectedFeature = feature;
+            selectedFeature.setStyle(selectedPhotoStyle);
+
+            const placeSpan = document.getElementById('place-' + id);
+            if (placeSpan && !placeSpan.dataset.loaded) {
+                const coordinates = ol.proj.toLonLat(lonLat);
+                const url = `/photos/place/?lat=${coordinates[1]}&lon=${coordinates[0]}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            placeSpan.textContent = 'Место не определено';
+                        } else {
+                            let shortName = data.name || data.display_name;
+                            if (data.display_name && data.display_name.includes(',')) {
+                                shortName = data.display_name.split(',')[0].trim();
+                            }
+                            placeSpan.textContent = '📍 ' + shortName;
+                            placeSpan.dataset.loaded = 'true';
+                        }
+                    })
+                    .catch(() => {
+                        placeSpan.textContent = 'Ошибка загрузки места';
+                    });
+            }
+        }
+
+        map.on('pointermove', function(event) {
+            const hit = map.forEachFeatureAtPixel(event.pixel, function() { return true; });
+            map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+        });
+
+        map.on('singleclick', function(event) {
+            const feature = map.forEachFeatureAtPixel(event.pixel, function(feature) {
+                return feature;
+            });
+
+            if (feature) {
+                openPhotoPopup(feature);
+            } else {
+                closePopup();
+            }
+        });
+
+        vectorSource.on('featuresloadend', function() {
+            const features = vectorSource.getFeatures();
+            features.forEach(function(feature) {
+                feature.set('lonLat', feature.getGeometry().getCoordinates());
+            });
+
+            if (features.length > 0) {
+                map.getView().fit(vectorSource.getExtent(), {
+                    maxZoom: 12,
+                    padding: [90, 40, 40, 40],
+                    duration: 300
+                });
+            }
+        });
+    </script>
+</body>
+</html>

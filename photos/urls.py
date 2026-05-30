@@ -2,6 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("public/<str:username>/", views.public_user_map, name="public_user_map"),
+    path(
+        "public/<str:username>/geojson/",
+        views.public_user_geojson,
+        name="public_user_geojson",
+    ),
     path('data.json', views.photos_geojson, name='photos_geojson'),
     path('my/', views.user_photos, name='user_photos'),
     path("", views.photo_list, name="photo_list"),

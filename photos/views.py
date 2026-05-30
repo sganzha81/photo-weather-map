@@ -3,6 +3,7 @@ from datetime import datetime
 import requests
 
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -97,6 +98,74 @@ def photo_list(request):
     # Вся логика по сбору данных теперь в photos_geojson, а здесь просто рендерим шаблон
     return render(request, 'photos/photo_list.html')
 
+
+def photo_geojson_feature(photo):
+    w = photo.weather_data or {}
+    weather_info = get_weather_info(w.get("weathercode"))
+    weather_source = None
+    weather_temperature = None
+    weather_temperature_max = None
+    weather_temperature_min = None
+    weather_precipitation = None
+    weather_time = None
+
+    if w.get("source") == "hourly":
+        weather_source = "hourly"
+        weather_temperature = w.get("temperature")
+        weather_precipitation = w.get("precipitation")
+        weather_time = w.get("weather_time")
+    elif w:
+        weather_source = "daily"
+        weather_temperature_max = w.get("temperature_max")
+        weather_temperature_min = w.get("temperature_min")
+        weather_precipitation = w.get("precipitation")
+
+    weather_parts = [f"{weather_info['emoji']} {weather_info['label']}"]
+    if weather_source == "hourly" and weather_temperature is not None:
+        weather_parts.append(f"{weather_temperature}°C")
+    elif weather_source == "daily":
+        if weather_temperature_max is not None:
+            weather_parts.append(f"Макс {weather_temperature_max}°C")
+        if weather_temperature_min is not None:
+            weather_parts.append(f"Мин {weather_temperature_min}°C")
+    if weather_precipitation is not None:
+        weather_parts.append(f"Осадки {weather_precipitation} мм")
+    weather_str = " · ".join(weather_parts) if w else "Нет данных"
+
+    taken = photo.taken_at or photo.uploaded_at
+    date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
+    climate_data = photo.climate_data or {}
+
+    return {
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [photo.longitude, photo.latitude],
+        },
+        "properties": {
+            "id": photo.id,
+            "date": date_str,
+            "weather": weather_str,
+            "weather_emoji": weather_info["emoji"],
+            "weather_label": weather_info["label"],
+            "weather_css_class": weather_info["css_class"],
+            "weather_source": weather_source,
+            "weather_temperature": weather_temperature,
+            "weather_temperature_max": weather_temperature_max,
+            "weather_temperature_min": weather_temperature_min,
+            "weather_precipitation": weather_precipitation,
+            "weather_time": weather_time,
+            "weather_time_display": format_weather_time(weather_time),
+            "climate_normal_temperature": climate_data.get("normal_temperature"),
+            "climate_temperature_anomaly": climate_data.get("temperature_anomaly"),
+            "climate_comparison_text": climate_data.get("comparison_text"),
+            "climate_source": climate_data.get("source"),
+            "image_url": photo.image.url if photo.image else "",
+            "is_public": photo.is_public,
+        },
+    }
+
+
 def get_place_name(request):
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
@@ -137,77 +206,49 @@ def photos_geojson(request):
         if photo.latitude is None or photo.longitude is None:
             continue
 
-        w = photo.weather_data or {}
-        weather_info = get_weather_info(w.get("weathercode"))
-        weather_source = None
-        weather_temperature = None
-        weather_temperature_max = None
-        weather_temperature_min = None
-        weather_precipitation = None
-        weather_time = None
-
-        if w.get("source") == "hourly":
-            weather_source = "hourly"
-            weather_temperature = w.get("temperature")
-            weather_precipitation = w.get("precipitation")
-            weather_time = w.get("weather_time")
-        elif w:
-            weather_source = "daily"
-            weather_temperature_max = w.get("temperature_max")
-            weather_temperature_min = w.get("temperature_min")
-            weather_precipitation = w.get("precipitation")
-
-        weather_parts = [f"{weather_info['emoji']} {weather_info['label']}"]
-        if weather_source == "hourly" and weather_temperature is not None:
-            weather_parts.append(f"{weather_temperature}°C")
-        elif weather_source == "daily":
-            if weather_temperature_max is not None:
-                weather_parts.append(f"Макс {weather_temperature_max}°C")
-            if weather_temperature_min is not None:
-                weather_parts.append(f"Мин {weather_temperature_min}°C")
-        if weather_precipitation is not None:
-            weather_parts.append(f"Осадки {weather_precipitation} мм")
-        weather_str = " · ".join(weather_parts) if w else "Нет данных"
-
-        taken = photo.taken_at or photo.uploaded_at
-        date_str = taken.strftime("%d.%m.%Y %H:%M") if taken else "Неизвестно"
-        climate_data = photo.climate_data or {}
-
-        feature = {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [photo.longitude, photo.latitude]  # Внимание: долгота, широта!
-            },
-            "properties": {
-                "id": photo.id,
-                "date": date_str,
-                "weather": weather_str,
-                "weather_emoji": weather_info["emoji"],
-                "weather_label": weather_info["label"],
-                "weather_css_class": weather_info["css_class"],
-                "weather_source": weather_source,
-                "weather_temperature": weather_temperature,
-                "weather_temperature_max": weather_temperature_max,
-                "weather_temperature_min": weather_temperature_min,
-                "weather_precipitation": weather_precipitation,
-                "weather_time": weather_time,
-                "weather_time_display": format_weather_time(weather_time),
-                "climate_normal_temperature": climate_data.get("normal_temperature"),
-                "climate_temperature_anomaly": climate_data.get("temperature_anomaly"),
-                "climate_comparison_text": climate_data.get("comparison_text"),
-                "climate_source": climate_data.get("source"),
-                "image_url": photo.image.url if photo.image else "",
-                "is_public": photo.is_public,
-            }
-        }
-        features.append(feature)
+        features.append(photo_geojson_feature(photo))
 
     geojson = {
         "type": "FeatureCollection",
         "features": features
     }
     return JsonResponse(geojson)
+
+
+def public_user_map(request, username):
+    public_user = get_object_or_404(User, username=username)
+    public_photo_count = Photo.objects.filter(
+        user=public_user,
+        is_public=True,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    ).count()
+
+    return render(
+        request,
+        "photos/public_map.html",
+        {
+            "public_user": public_user,
+            "public_photo_count": public_photo_count,
+        },
+    )
+
+
+def public_user_geojson(request, username):
+    public_user = get_object_or_404(User, username=username)
+    photos = Photo.objects.filter(
+        user=public_user,
+        is_public=True,
+        latitude__isnull=False,
+        longitude__isnull=False,
+    )
+
+    return JsonResponse(
+        {
+            "type": "FeatureCollection",
+            "features": [photo_geojson_feature(photo) for photo in photos],
+        }
+    )
 
 @login_required
 def delete_photo(request, photo_id):
@@ -279,6 +320,7 @@ def user_photos(request):
         "no_date": base_photos.filter(taken_at__isnull=True).count(),
         "no_weather": base_photos.filter(weather_data__isnull=True).count(),
     }
+    public_photo_count = base_photos.filter(is_public=True).count()
 
     if active_status == "on_map":
         photos = photos.filter(latitude__isnull=False, longitude__isnull=False)
@@ -311,6 +353,7 @@ def user_photos(request):
             "storage_usage_percent": storage_usage_percent,
             "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
             "storage_usage_status": storage_usage_status,
+            "public_photo_count": public_photo_count,
         },
     )
 
