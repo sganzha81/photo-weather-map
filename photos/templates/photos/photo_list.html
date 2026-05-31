@@ -346,8 +346,16 @@
                     ${weather}
                     ${climate}
                     <div class="place-info" id="place-${id}">Загрузка места...</div>
-                    <a class="edit-btn" href="/photos/edit/${id}/">Редактировать</a>
-                    <button class="delete-btn" onclick="deletePhoto(${id}, this)">🗑️ Удалить</button>
+                    <div class="popup-actions">
+                        <a class="edit-btn" href="/photos/edit/${id}/">
+                            <span class="popup-action-icon" aria-hidden="true">✏️</span>
+                            <span class="popup-action-text">Изменить</span>
+                        </a>
+                        <button class="delete-btn" onclick="deletePhoto(${id}, this)">
+                            <span class="popup-action-icon" aria-hidden="true">🗑️</span>
+                            <span class="popup-action-text">Удалить</span>
+                        </button>
+                    </div>
                 </div>
             `;
             resetPopupDragOffset();

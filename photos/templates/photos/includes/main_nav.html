@@ -1,4 +1,4 @@
-<nav class="main-nav{% if main_nav_variant == 'map' %} main-nav-map{% endif %}" aria-label="Основная навигация">
+<nav class="main-nav{% if main_nav_variant == 'map' %} main-nav-map{% endif %}{% if request.user.is_authenticated %} main-nav-authenticated{% endif %}" aria-label="Основная навигация">
     <div class="main-nav-left">
         <a href="{% url 'photo_list' %}" class="main-nav-brand">Weatherpins</a>
         {% if request.user.is_authenticated %}
@@ -19,3 +19,24 @@
         {% endif %}
     </div>
 </nav>
+
+{% if request.user.is_authenticated %}
+    <nav class="mobile-bottom-nav" aria-label="Мобильная навигация">
+        <a href="{% url 'photo_list' %}" class="mobile-bottom-nav-link">
+            <span class="mobile-bottom-nav-icon" aria-hidden="true">🗺️</span>
+            <span class="mobile-bottom-nav-label">Карта</span>
+        </a>
+        <a href="{% url 'user_photos' %}" class="mobile-bottom-nav-link">
+            <span class="mobile-bottom-nav-icon" aria-hidden="true">🖼️</span>
+            <span class="mobile-bottom-nav-label">Фото</span>
+        </a>
+        <a href="{% url 'upload_photo' %}" class="mobile-bottom-nav-link">
+            <span class="mobile-bottom-nav-icon" aria-hidden="true">📤</span>
+            <span class="mobile-bottom-nav-label">Загрузить</span>
+        </a>
+        <a href="{% url 'profile' %}" class="mobile-bottom-nav-link">
+            <span class="mobile-bottom-nav-icon" aria-hidden="true">👤</span>
+            <span class="mobile-bottom-nav-label">Профиль</span>
+        </a>
+    </nav>
+{% endif %}

@@ -199,6 +199,10 @@ body {
     overflow-wrap: anywhere;
 }
 
+.mobile-bottom-nav {
+    display: none;
+}
+
 .messages {
     list-style: none;
     padding: 0;
@@ -1220,6 +1224,11 @@ input[type="file"] {
     max-width: 150px;
 }
 
+.map-page .popup-card {
+    width: min(280px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+}
+
 .weather-info {
     margin: 8px 0;
     padding: 8px;
@@ -1266,25 +1275,52 @@ input[type="file"] {
     background: #e0e0e0;
 }
 
-.delete-btn {
-    background: #ff4d4d;
-    color: #ffffff;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-top: 8px;
+.popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.edit-btn {
-    display: inline-block;
+.popup-actions .edit-btn,
+.popup-actions .delete-btn {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 8px;
+    border: none;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.popup-actions .edit-btn {
     background: #4a90e2;
     color: #ffffff;
-    text-decoration: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    margin-top: 8px;
-    margin-right: 6px;
+}
+
+.popup-actions .delete-btn {
+    background: #ff4d4d;
+    color: #ffffff;
+}
+
+.popup-action-icon,
+.popup-action-text {
+    min-width: 0;
+}
+
+.popup-action-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .edit-btn:hover {
@@ -1396,6 +1432,84 @@ input[type="file"] {
     }
 }
 
+@media (max-width: 768px) {
+    body:has(.mobile-bottom-nav) {
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
+
+    body:has(.mobile-bottom-nav).map-page #map {
+        height: calc(100vh - 72px - env(safe-area-inset-bottom));
+    }
+
+    body:has(.mobile-bottom-nav) .main-nav {
+        display: none;
+    }
+
+    .mobile-bottom-nav {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 2000;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-height: calc(64px + env(safe-area-inset-bottom));
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(148, 163, 184, 0.5);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(12px);
+    }
+
+    .mobile-bottom-nav-link {
+        display: flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 3px;
+        border-radius: 8px;
+        color: #1f2937;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+        text-decoration: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-bottom-nav-link:active {
+        background: #eef4ff;
+    }
+
+    .mobile-bottom-nav-icon {
+        font-size: 22px;
+        line-height: 1;
+    }
+
+    .mobile-bottom-nav-label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 360px) {
+    .popup-actions .edit-btn,
+    .popup-actions .delete-btn {
+        gap: 0;
+    }
+
+    .popup-actions .popup-action-text {
+        display: none;
+    }
+
+    .popup-actions .popup-action-icon {
+        font-size: 18px;
+    }
+}
+
 @media (max-width: 640px) {
     .page {
         padding: 18px 12px 28px;
@@ -1486,7 +1600,7 @@ input[type="file"] {
         font-size: 16px;
     }
 
-    .main-nav-links a,
+    .main-nav:not(.main-nav-authenticated) .main-nav-links a,
     .main-nav-user {
         font-size: 14px;
     }
