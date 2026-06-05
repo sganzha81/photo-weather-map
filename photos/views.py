@@ -13,6 +13,8 @@ from django.views.decorators.http import require_POST
 from django.templatetags.static import static
 from django.urls import reverse
 
+from accounts.models import UserProfile
+
 from .forms import PhotoEditForm
 from .climate import fetch_climate_comparison_for_photo
 from .file_utils import format_file_size
@@ -219,6 +221,12 @@ def photos_geojson(request):
 
 def public_user_map(request, username):
     public_user = get_object_or_404(User, username=username)
+    public_user_profile, _ = UserProfile.objects.get_or_create(user=public_user)
+    public_user_full_name = public_user.get_full_name()
+    show_public_user_full_name = (
+        public_user_profile.show_full_name_on_public_map
+        and bool(public_user_full_name)
+    )
     public_photo_count = Photo.objects.filter(
         user=public_user,
         is_public=True,
@@ -243,6 +251,8 @@ def public_user_map(request, username):
         "photos/public_map.html",
         {
             "public_user": public_user,
+            "public_user_full_name": public_user_full_name,
+            "show_public_user_full_name": show_public_user_full_name,
             "public_photo_count": public_photo_count,
             "public_map_url": public_map_url,
             "og_title": og_title,

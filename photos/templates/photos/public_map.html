@@ -32,7 +32,13 @@
 
     <section class="public-panel" aria-label="Информация о публичной карте">
         <p class="brand">Weatherpins</p>
-        <h1 class="map-title">Публичная карта пользователя: {{ public_user.username }}</h1>
+        <h1 class="map-title">Публичная карта пользователя</h1>
+        {% if show_public_user_full_name %}
+            <div class="public-user-name">{{ public_user_full_name }}</div>
+            <div class="public-user-username">@{{ public_user.username }}</div>
+        {% else %}
+            <div class="public-user-username">@{{ public_user.username }}</div>
+        {% endif %}
         <div class="map-count">Публичных фото: {{ public_photo_count }}</div>
         {% if user.is_authenticated %}
             {% if user == public_user %}

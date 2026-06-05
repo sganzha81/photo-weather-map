@@ -2,7 +2,10 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from photos.models import Photo
+
 from .forms import RegisterForm, USERNAME_ERROR_MESSAGE, UserProfileForm
+from .models import UserProfile
 
 
 class RegisterFormTests(TestCase):
@@ -69,6 +72,42 @@ class RegisterViewTests(TestCase):
 
         self.assertRedirects(response, reverse("photo_list"))
         self.assertTrue(User.objects.filter(username="olga-k16").exists())
+
+
+class UserProfileModelTests(TestCase):
+    def test_profile_created_for_new_user(self):
+        user = User.objects.create_user(
+            username="olga",
+            email="olga@example.com",
+            password="password123",
+        )
+
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())
+
+    def test_default_show_full_name_on_public_map_is_false(self):
+        user = User.objects.create_user(
+            username="olga",
+            email="olga@example.com",
+            password="password123",
+        )
+
+        self.assertFalse(user.profile.show_full_name_on_public_map)
+
+    def test_existing_user_profile_can_be_get_or_created(self):
+        User.objects.bulk_create(
+            [
+                User(
+                    username="legacy",
+                    email="legacy@example.com",
+                )
+            ]
+        )
+        user = User.objects.get(username="legacy")
+
+        profile, created = UserProfile.objects.get_or_create(user=user)
+
+        self.assertTrue(created)
+        self.assertFalse(profile.show_full_name_on_public_map)
 
 
 class UserProfileFormTests(TestCase):
@@ -195,3 +234,97 @@ class ProfileEditViewTests(TestCase):
         self.assertEqual(self.user.email, "new@example.com")
         self.assertEqual(self.user.first_name, "Ольга")
         self.assertEqual(self.user.last_name, "Климова")
+
+    def test_saves_show_full_name_on_public_map_true(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("profile_edit"),
+            {
+                "username": "olga",
+                "email": "olga@example.com",
+                "first_name": "Ольга",
+                "last_name": "Климова",
+                "show_full_name_on_public_map": "on",
+            },
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        self.user.profile.refresh_from_db()
+        self.assertTrue(self.user.profile.show_full_name_on_public_map)
+
+    def test_saves_show_full_name_on_public_map_false(self):
+        self.user.profile.show_full_name_on_public_map = True
+        self.user.profile.save(update_fields=["show_full_name_on_public_map"])
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("profile_edit"),
+            {
+                "username": "olga",
+                "email": "olga@example.com",
+                "first_name": "Ольга",
+                "last_name": "Климова",
+            },
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        self.user.profile.refresh_from_db()
+        self.assertFalse(self.user.profile.show_full_name_on_public_map)
+
+
+class PublicMapNameDisplayTests(TestCase):
+    def create_public_photo(self, user):
+        return Photo.objects.create(
+            user=user,
+            latitude=53.2,
+            longitude=50.15,
+            is_public=True,
+        )
+
+    def test_public_map_when_false_shows_only_username(self):
+        user = User.objects.create_user(
+            username="olga",
+            email="olga@example.com",
+            password="password123",
+            first_name="Ольга",
+            last_name="Климова",
+        )
+        self.create_public_photo(user)
+
+        response = self.client.get(reverse("public_user_map", args=[user.username]))
+
+        self.assertContains(response, "@olga")
+        self.assertNotContains(response, "Ольга Климова")
+
+    def test_public_map_when_true_and_full_name_shows_full_name_and_username(self):
+        user = User.objects.create_user(
+            username="olga",
+            email="olga@example.com",
+            password="password123",
+            first_name="Ольга",
+            last_name="Климова",
+        )
+        user.profile.show_full_name_on_public_map = True
+        user.profile.save(update_fields=["show_full_name_on_public_map"])
+        self.create_public_photo(user)
+
+        response = self.client.get(reverse("public_user_map", args=[user.username]))
+
+        self.assertContains(response, "Ольга Климова")
+        self.assertContains(response, "@olga")
+
+    def test_public_map_when_true_without_full_name_shows_only_username(self):
+        user = User.objects.create_user(
+            username="olga",
+            email="olga@example.com",
+            password="password123",
+        )
+        user.profile.show_full_name_on_public_map = True
+        user.profile.save(update_fields=["show_full_name_on_public_map"])
+        self.create_public_photo(user)
+
+        response = self.client.get(reverse("public_user_map", args=[user.username]))
+
+        self.assertContains(response, "@olga")
+        self.assertNotContains(response, "public-user-name")

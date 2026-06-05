@@ -10,6 +10,7 @@ from photos.models import Photo
 from photos.site_settings import get_user_storage_limit_bytes
 
 from .forms import RegisterForm, UserProfileForm
+from .models import UserProfile
 
 
 def register(request):
@@ -30,6 +31,12 @@ def register(request):
 @login_required
 def profile(request):
     photos = Photo.objects.filter(user=request.user)
+    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    full_name = request.user.get_full_name()
+    public_name_display = "Только @username"
+    if user_profile.show_full_name_on_public_map and full_name:
+        public_name_display = "Имя Фамилия и @username"
+
     storage_used = photos.aggregate(total=Sum("file_size"))["total"] or 0
     storage_limit = get_user_storage_limit_bytes()
     storage_usage_percent = (
@@ -64,6 +71,7 @@ def profile(request):
         "storage_limit_display": format_file_size(storage_limit),
         "storage_usage_percent": storage_usage_percent,
         "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
+        "public_name_display": public_name_display,
     }
     return render(request, "registration/profile.html", context)
 

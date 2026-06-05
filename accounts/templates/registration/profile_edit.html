@@ -88,6 +88,22 @@
                 {% endif %}
             </div>
 
+            <div class="form-row">
+                <label class="public-toggle" for="{{ form.show_full_name_on_public_map.id_for_label }}">
+                    {{ form.show_full_name_on_public_map }}
+                    <span>{{ form.show_full_name_on_public_map.label }}</span>
+                </label>
+                <div class="help-text">{{ form.show_full_name_on_public_map.help_text }}</div>
+
+                {% if form.show_full_name_on_public_map.errors %}
+                    <ul class="error-list">
+                        {% for error in form.show_full_name_on_public_map.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+
             <button type="submit" class="submit-button">Сохранить</button>
         </form>
 
