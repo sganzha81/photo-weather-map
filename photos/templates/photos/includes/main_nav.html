@@ -2,7 +2,15 @@
     <div class="main-nav-left">
         <a href="{% url 'photo_list' %}" class="main-nav-brand">Weatherpins</a>
         {% if request.user.is_authenticated %}
-            <span class="main-nav-user">@{{ request.user.username }}</span>
+            {% with full_name=request.user.get_full_name %}
+                <span class="main-nav-user">
+                    {% if full_name %}
+                        @{{ request.user.username }} · {{ full_name }}
+                    {% else %}
+                        @{{ request.user.username }}
+                    {% endif %}
+                </span>
+            {% endwith %}
         {% endif %}
     </div>
 
