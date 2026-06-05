@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib import messages
 from django.db.models import Q, Sum
@@ -9,12 +9,12 @@ from photos.file_utils import format_file_size
 from photos.models import Photo
 from photos.site_settings import get_user_storage_limit_bytes
 
-from .forms import UserProfileForm
+from .forms import RegisterForm, UserProfileForm
 
 
 def register(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()  # создаёт пользователя в базе
             login(request, user)  # сразу авторизуем (создаём сессию)
@@ -23,7 +23,7 @@ def register(request):
         else:
             messages.error(request, "Пожалуйста, исправьте ошибки.")
     else:
-        form = UserCreationForm()
+        form = RegisterForm()
     return render(request, "registration/register.html", {"form": form})
 
 
