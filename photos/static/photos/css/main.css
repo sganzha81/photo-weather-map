@@ -83,6 +83,7 @@ body {
 .login-card,
 .register-card,
 .profile-card,
+.profile-edit-card,
 .password-card {
     width: 100%;
     background: #ffffff;
@@ -115,6 +116,12 @@ body {
 }
 
 .password-card {
+    border-radius: 18px;
+    padding: 36px 32px;
+}
+
+.profile-edit-card {
+    max-width: 560px;
     border-radius: 18px;
     padding: 36px 32px;
 }
@@ -480,9 +487,14 @@ input[type="file"]:focus {
 .back-link,
 .login-link a,
 .register-link a {
+    display: inline-block;
     color: #4a148c;
     font-weight: 700;
     text-decoration: none;
+}
+
+.back-link {
+    margin-top: 18px;
 }
 
 .back-link:hover,

@@ -9,6 +9,8 @@ from photos.file_utils import format_file_size
 from photos.models import Photo
 from photos.site_settings import get_user_storage_limit_bytes
 
+from .forms import UserProfileForm
+
 
 def register(request):
     if request.method == "POST":
@@ -64,6 +66,20 @@ def profile(request):
         "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
     }
     return render(request, "registration/profile.html", context)
+
+
+@login_required
+def profile_edit(request):
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Профиль обновлён.")
+            return redirect("profile")
+    else:
+        form = UserProfileForm(instance=request.user)
+
+    return render(request, "registration/profile_edit.html", {"form": form})
 
 
 @login_required
