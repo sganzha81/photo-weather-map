@@ -31,6 +31,7 @@
 
         <form method="post">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
 
             <div class="form-row">
                 <label for="{{ form.taken_at.id_for_label }}">Дата съёмки</label>
@@ -83,7 +84,7 @@
 
             <div class="form-actions">
                 <button type="submit" class="save-button">Сохранить</button>
-                <a href="{% url 'user_photos' %}" class="back-link">Назад к моим фото</a>
+                <a href="{{ cancel_url }}" class="back-link">Назад к моим фото</a>
             </div>
         </form>
     </main>

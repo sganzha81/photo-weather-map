@@ -943,6 +943,14 @@ input[type="file"] {
     cursor: wait;
 }
 
+.climate-form-loading {
+    opacity: 0.72;
+}
+
+.climate-form-loading .btn-climate {
+    cursor: wait;
+}
+
 .public-toggle-label {
     display: inline-flex;
     align-items: center;

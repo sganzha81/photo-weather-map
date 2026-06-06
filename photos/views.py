@@ -35,6 +35,42 @@ def format_weather_time(weather_time):
         return weather_time
 
 
+def format_climate_temperature(value):
+    if value is None:
+        return None
+
+    prefix = "+" if value > 0 else ""
+    return f"{prefix}{value:.1f} °C"
+
+
+def climate_norm_payload(photo, message, success=True):
+    climate_data = photo.climate_data or {}
+    return {
+        "success": success,
+        "photo_id": photo.id,
+        "climate_data": climate_data,
+        "climate_display": {
+            "normal_temperature": format_climate_temperature(
+                climate_data.get("normal_temperature")
+            ),
+            "comparison_text": climate_data.get("comparison_text") or "",
+            "years_used": climate_data.get("years_used") or [],
+        },
+        "message": message,
+    }
+
+
+def get_safe_next_url(request, next_url):
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+
+    return None
+
+
 @login_required
 def upload_photo(request):
     if request.method == "POST":
@@ -472,6 +508,7 @@ def refresh_weather(request, photo_id):
 @require_POST
 def calculate_climate_norm(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     if (
         photo.latitude is None
@@ -479,22 +516,44 @@ def calculate_climate_norm(request, photo_id):
         or photo.taken_at is None
         or not photo.weather_data
     ):
-        messages.warning(
-            request,
-            "Для расчёта нормы нужны координаты, дата и погода.",
-        )
+        message = "Для расчёта нормы нужны координаты, дата и погода."
+        if is_ajax:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "photo_id": photo.id,
+                    "climate_data": photo.climate_data or {},
+                    "message": message,
+                },
+                status=400,
+            )
+
+        messages.warning(request, message)
         return redirect("user_photos")
 
     result = fetch_climate_comparison_for_photo(photo)
     if result is not None:
         photo.climate_data = result
         photo.save(update_fields=["climate_data"])
-        messages.success(request, "Климатическая норма рассчитана.")
+        message = "Климатическая норма рассчитана."
+        if is_ajax:
+            return JsonResponse(climate_norm_payload(photo, message))
+
+        messages.success(request, message)
     else:
-        messages.warning(
-            request,
-            "Не удалось рассчитать климатическую норму. Попробуйте позже.",
-        )
+        message = "Не удалось рассчитать климатическую норму. Попробуйте позже."
+        if is_ajax:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "photo_id": photo.id,
+                    "climate_data": photo.climate_data or {},
+                    "message": message,
+                },
+                status=502,
+            )
+
+        messages.warning(request, message)
 
     return redirect("user_photos")
 
@@ -502,9 +561,11 @@ def calculate_climate_norm(request, photo_id):
 @login_required
 def edit_photo(request, photo_id):
     photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+    next_url = get_safe_next_url(request, request.GET.get("next"))
 
     if request.method == "POST":
         form = PhotoEditForm(request.POST, instance=photo)
+        next_url = get_safe_next_url(request, request.POST.get("next"))
 
         if form.is_valid():
             photo = form.save(commit=False)
@@ -534,6 +595,8 @@ def edit_photo(request, photo_id):
                     )
 
             photo.save()
+            if next_url:
+                return redirect(next_url)
             return redirect("user_photos")
     else:
         form = PhotoEditForm(instance=photo)
@@ -544,5 +607,7 @@ def edit_photo(request, photo_id):
         {
             "form": form,
             "photo": photo,
+            "next": next_url or "",
+            "cancel_url": next_url or reverse("user_photos"),
         },
     )
