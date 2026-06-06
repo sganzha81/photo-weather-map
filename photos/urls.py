@@ -13,6 +13,11 @@ urlpatterns = [
     path("", views.photo_list, name="photo_list"),
     path("upload/", views.upload_photo, name="upload_photo"),
     path("edit/<int:photo_id>/", views.edit_photo, name="edit_photo"),
+    path(
+        "<int:photo_id>/toggle-public/",
+        views.toggle_photo_public,
+        name="toggle_photo_public",
+    ),
     path("place/", views.get_place_name, name="get_place_name"),
     path(
         "weather/refresh/<int:photo_id>/",

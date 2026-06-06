@@ -30,10 +30,12 @@
             <div class="public-map-summary">
 				<div class="public-map-info">
 					<div class="public-map-title">🌍 Моя публичная карта</div>
-					<div class="public-map-count">{{ public_photo_count }} публичных фото</div>
+					<div class="public-map-count">
+                        <span data-public-count>{{ public_photo_count }}</span> публичных фото
+                    </div>
 
 					{% if public_photo_count == 0 %}
-						<div class="public-map-hint">
+						<div class="public-map-hint" data-public-map-hint>
 							Отметьте фото как публичные, чтобы они появились на публичной карте.
 						</div>
 					{% endif %}
@@ -72,6 +74,8 @@
             </ul>
         {% endif %}
 
+        <div class="ajax-feedback" data-public-toggle-feedback role="status" aria-live="polite" hidden></div>
+
         <nav class="filters" aria-label="Фильтры фотографий">
             <a href="{% url 'user_photos' %}" class="filter-link {% if active_status == 'all' %}filter-link-active{% endif %}">
                 Все <span class="filter-count">· {{ filter_counts.all }}</span>
@@ -89,12 +93,12 @@
                 Без погоды <span class="filter-count">· {{ filter_counts.no_weather }}</span>
             </a>
             <a href="{% url 'user_photos' %}?status=public" class="filter-link {% if active_status == 'public' %}filter-link-active{% endif %}">
-                Публичные <span class="filter-count">· {{ filter_counts.public }}</span>
+                Публичные <span class="filter-count">· <span data-public-count>{{ filter_counts.public }}</span></span>
             </a>
         </nav>
 
         <div class="photo-summary">
-            Всего фото: {{ total_photo_count }} · Публичные: {{ public_photo_count }} · Занято: {{ storage_used_display }} из {{ storage_limit_display }}
+            Всего фото: {{ total_photo_count }} · Публичные: <span data-public-count>{{ public_photo_count }}</span> · Занято: {{ storage_used_display }} из {{ storage_limit_display }}
         </div>
 
         <div class="storage-progress storage-progress-{{ storage_usage_status }}" aria-label="Использование хранилища">
@@ -109,7 +113,7 @@
         {% if photos %}
             <section class="photo-grid" aria-label="Список фотографий">
                 {% for photo in photos %}
-                    <article class="photo-card">
+                    <article class="photo-card" data-photo-card data-photo-id="{{ photo.id }}">
                         <div class="photo-thumb">
                             <img src="{{ photo.image.url }}" alt="Загруженное фото">
                         </div>
@@ -139,7 +143,7 @@
 
                                 <div class="meta-row">
                                     <div class="meta-label">Статус</div>
-                                    <div class="meta-value">
+                                    <div class="meta-value status-row">
                                         <ul class="status-list">
                                             {% if photo.latitude is not None and photo.longitude is not None %}
                                                 <li class="status status-ok">✅ На карте</li>
@@ -156,11 +160,42 @@
                                             {% endif %}
 
                                             {% if photo.is_public %}
-                                                <li class="status visibility-badge visibility-badge-public">🌍 Публичное</li>
+                                                <li class="status visibility-badge visibility-badge-public" data-visibility-badge>🌍 Публичное</li>
                                             {% else %}
-                                                <li class="status visibility-badge visibility-badge-private">🔒 Приватное</li>
+                                                <li class="status visibility-badge visibility-badge-private" data-visibility-badge>🔒 Приватное</li>
                                             {% endif %}
                                         </ul>
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'toggle_photo_public' photo.id %}"
+                                            class="public-toggle-form"
+                                            data-public-toggle-form
+                                            title="{% if photo.is_public %}Фото отображается на вашей публичной карте. Выключите переключатель, чтобы скрыть его.{% else %}Фото скрыто с вашей публичной карты. Включите переключатель, чтобы показать его.{% endif %}"
+                                        >
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <span class="public-toggle-label">
+                                                На публичной карте
+                                                <span class="public-toggle-info" aria-hidden="true">ⓘ</span>
+                                            </span>
+                                            <button
+                                                type="submit"
+                                                class="public-switch {% if photo.is_public %}public-switch-on{% else %}public-switch-off{% endif %}"
+                                                data-public-switch
+                                                aria-pressed="{% if photo.is_public %}true{% else %}false{% endif %}"
+                                                aria-label="{% if photo.is_public %}Скрыть фото с публичной карты{% else %}Показывать фото на публичной карте{% endif %}"
+                                            >
+                                                <span class="public-switch-knob" aria-hidden="true"></span>
+                                                <span class="visually-hidden" data-public-switch-text>
+                                                    {% if photo.is_public %}
+                                                        Фото отображается на публичной карте. Нажмите, чтобы скрыть.
+                                                    {% else %}
+                                                        Фото скрыто с публичной карты. Нажмите, чтобы показать.
+                                                    {% endif %}
+                                                </span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
 
@@ -271,7 +306,7 @@
                 {% endfor %}
             </section>
         {% else %}
-            <section class="empty-state">
+            <section class="empty-state" data-empty-state>
                 {% if active_status == 'public' %}
                     <h2>У вас пока нет публичных фото.</h2>
                     <p>Отметьте фото как публичные, чтобы они появились на публичной карте.</p>
@@ -302,6 +337,7 @@
             </section>
         {% endif %}
     </main>
+    {{ active_status|json_script:"active-status" }}
     <script>
 	document.addEventListener("DOMContentLoaded", function () {
 		const copyButton = document.getElementById("copyPublicMapBtn");
@@ -332,6 +368,132 @@
 			}
 		});
 	});
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const forms = document.querySelectorAll("[data-public-toggle-form]");
+        const activeStatusNode = document.getElementById("active-status");
+        const activeStatus = activeStatusNode ? JSON.parse(activeStatusNode.textContent) : "all";
+        const feedback = document.querySelector("[data-public-toggle-feedback]");
+
+        function setFeedback(message, isError) {
+            if (!feedback) {
+                return;
+            }
+
+            feedback.textContent = message;
+            feedback.hidden = false;
+            feedback.classList.toggle("ajax-feedback-error", Boolean(isError));
+        }
+
+        function updatePublicCounts(publicCount) {
+            document.querySelectorAll("[data-public-count]").forEach(function (countNode) {
+                countNode.textContent = publicCount;
+            });
+
+            const hint = document.querySelector("[data-public-map-hint]");
+            if (hint && publicCount > 0) {
+                hint.remove();
+            }
+        }
+
+        function updateToggleState(form, isPublic) {
+            const card = form.closest("[data-photo-card]");
+            const switchButton = form.querySelector("[data-public-switch]");
+            const switchText = form.querySelector("[data-public-switch-text]");
+            const badge = card ? card.querySelector("[data-visibility-badge]") : null;
+            const formTitle = isPublic
+                ? "Фото отображается на вашей публичной карте. Выключите переключатель, чтобы скрыть его."
+                : "Фото скрыто с вашей публичной карты. Включите переключатель, чтобы показать его.";
+            const ariaLabel = isPublic
+                ? "Скрыть фото с публичной карты"
+                : "Показывать фото на публичной карте";
+            const hiddenText = isPublic
+                ? "Фото отображается на публичной карте. Нажмите, чтобы скрыть."
+                : "Фото скрыто с публичной карты. Нажмите, чтобы показать.";
+
+            form.title = formTitle;
+
+            if (switchButton) {
+                switchButton.classList.toggle("public-switch-on", isPublic);
+                switchButton.classList.toggle("public-switch-off", !isPublic);
+                switchButton.setAttribute("aria-pressed", isPublic ? "true" : "false");
+                switchButton.setAttribute("aria-label", ariaLabel);
+            }
+
+            if (switchText) {
+                switchText.textContent = hiddenText;
+            }
+
+            if (badge) {
+                badge.classList.toggle("visibility-badge-public", isPublic);
+                badge.classList.toggle("visibility-badge-private", !isPublic);
+                badge.textContent = isPublic ? "🌍 Публичное" : "🔒 Приватное";
+            }
+        }
+
+        function showPublicEmptyState() {
+            const grid = document.querySelector(".photo-grid");
+            if (!grid || grid.querySelector("[data-photo-card]")) {
+                return;
+            }
+
+            const emptyState = document.createElement("section");
+            emptyState.className = "empty-state";
+            emptyState.setAttribute("data-empty-state", "");
+            emptyState.innerHTML = "<h2>У вас пока нет публичных фото.</h2><p>Отметьте фото как публичные, чтобы они появились на публичной карте.</p>";
+            grid.replaceWith(emptyState);
+        }
+
+        forms.forEach(function (form) {
+            form.addEventListener("submit", async function (event) {
+                if (!window.fetch) {
+                    return;
+                }
+
+                event.preventDefault();
+                form.classList.add("public-toggle-form-loading");
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        credentials: "same-origin",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Toggle request failed");
+                    }
+
+                    const data = await response.json();
+                    if (!data.success) {
+                        throw new Error("Toggle response was not successful");
+                    }
+
+                    updateToggleState(form, data.is_public);
+                    updatePublicCounts(data.public_count);
+                    setFeedback(data.message, false);
+
+                    if (activeStatus === "public" && !data.is_public) {
+                        const card = form.closest("[data-photo-card]");
+                        if (card) {
+                            card.remove();
+                            showPublicEmptyState();
+                        }
+                    }
+                } catch (error) {
+                    setFeedback(
+                        "Не удалось обновить публичность фото. Обновите страницу и попробуйте ещё раз.",
+                        true
+                    );
+                } finally {
+                    form.classList.remove("public-toggle-form-loading");
+                }
+            });
+        });
+    });
 	</script>
 </body>
 </html>

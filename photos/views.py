@@ -12,6 +12,7 @@ from django.db.models import Q, Sum
 from django.views.decorators.http import require_POST
 from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from accounts.models import UserProfile
 
@@ -277,6 +278,46 @@ def public_user_geojson(request, username):
             "features": [photo_geojson_feature(photo) for photo in photos],
         }
     )
+
+@login_required
+@require_POST
+def toggle_photo_public(request, photo_id):
+    photo = get_object_or_404(Photo, pk=photo_id, user=request.user)
+    photo.is_public = not photo.is_public
+    photo.save(update_fields=["is_public"])
+
+    if photo.is_public:
+        message = "Фото теперь отображается на публичной карте."
+    else:
+        message = "Фото скрыто с публичной карты."
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        public_count = Photo.objects.filter(
+            user=request.user,
+            is_public=True,
+        ).count()
+        return JsonResponse(
+            {
+                "success": True,
+                "photo_id": photo.id,
+                "is_public": photo.is_public,
+                "public_count": public_count,
+                "message": message,
+            }
+        )
+
+    messages.success(request, message)
+
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+
+    return redirect("user_photos")
+
 
 @login_required
 def delete_photo(request, photo_id):
