@@ -88,10 +88,13 @@
             <a href="{% url 'user_photos' %}?status=no_weather" class="filter-link {% if active_status == 'no_weather' %}filter-link-active{% endif %}">
                 Без погоды <span class="filter-count">· {{ filter_counts.no_weather }}</span>
             </a>
+            <a href="{% url 'user_photos' %}?status=public" class="filter-link {% if active_status == 'public' %}filter-link-active{% endif %}">
+                Публичные <span class="filter-count">· {{ filter_counts.public }}</span>
+            </a>
         </nav>
 
         <div class="photo-summary">
-            Всего фото: {{ total_photo_count }} · Занято: {{ storage_used_display }} из {{ storage_limit_display }}
+            Всего фото: {{ total_photo_count }} · Публичные: {{ public_photo_count }} · Занято: {{ storage_used_display }} из {{ storage_limit_display }}
         </div>
 
         <div class="storage-progress storage-progress-{{ storage_usage_status }}" aria-label="Использование хранилища">
@@ -153,9 +156,9 @@
                                             {% endif %}
 
                                             {% if photo.is_public %}
-                                                <li class="status status-public">Публичное</li>
+                                                <li class="status visibility-badge visibility-badge-public">🌍 Публичное</li>
                                             {% else %}
-                                                <li class="status status-private">Приватное</li>
+                                                <li class="status visibility-badge visibility-badge-private">🔒 Приватное</li>
                                             {% endif %}
                                         </ul>
                                     </div>
@@ -269,7 +272,10 @@
             </section>
         {% else %}
             <section class="empty-state">
-                {% if total_photo_count == 0 %}
+                {% if active_status == 'public' %}
+                    <h2>У вас пока нет публичных фото.</h2>
+                    <p>Отметьте фото как публичные, чтобы они появились на публичной карте.</p>
+                {% elif total_photo_count == 0 %}
                     <h2>У вас пока нет фото</h2>
                     <p>
                         Загрузите первое фото с геометкой, чтобы увидеть его на карте,

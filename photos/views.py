@@ -347,8 +347,8 @@ def user_photos(request):
         ).count(),
         "no_date": base_photos.filter(taken_at__isnull=True).count(),
         "no_weather": base_photos.filter(weather_data__isnull=True).count(),
+        "public": base_photos.filter(is_public=True).count(),
     }
-    public_photo_count = base_photos.filter(is_public=True).count()
 
     if active_status == "on_map":
         photos = photos.filter(latitude__isnull=False, longitude__isnull=False)
@@ -358,6 +358,8 @@ def user_photos(request):
         photos = photos.filter(taken_at__isnull=True)
     elif active_status == "no_weather":
         photos = photos.filter(weather_data__isnull=True)
+    elif active_status == "public":
+        photos = photos.filter(is_public=True)
     else:
         active_status = "all"
 
@@ -367,10 +369,7 @@ def user_photos(request):
         photo.weather_time_display = format_weather_time(weather_data.get("weather_time"))
         photo.file_size_display = format_file_size(photo.file_size)
 
-    public_photo_count = Photo.objects.filter(
-        user=request.user,
-        is_public=True,
-    ).count()
+    public_photo_count = filter_counts["public"]
 
     public_map_url = request.build_absolute_uri(
         reverse("public_user_map", args=[request.user.username])
@@ -391,8 +390,7 @@ def user_photos(request):
             "storage_usage_bar_percent_css": storage_usage_bar_percent_css,
             "storage_usage_status": storage_usage_status,
             "public_photo_count": public_photo_count,
-            "public_photo_count": public_photo_count,
-			"public_map_url": public_map_url,
+            "public_map_url": public_map_url,
         },
     )
 
