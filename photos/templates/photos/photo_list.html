@@ -47,6 +47,7 @@
     </section>
 
     {% include "photos/includes/main_nav.html" with main_nav_variant="map" %}
+    {% include "photos/includes/image_lightbox.html" %}
 
     <!-- Скрытое поле для CSRF-токена (нужно для удаления) -->
     {% csrf_token %}
@@ -257,6 +258,10 @@
                 .replace(/'/g, '&#039;');
         }
 
+        function escapeAttribute(value) {
+            return escapeHtml(value).replace(/`/g, '&#096;');
+        }
+
         function isPresent(value) {
             return value !== null && value !== undefined && value !== '';
         }
@@ -334,7 +339,8 @@
             const date = props.date;
             const weather = formatWeather(props);
             const climate = formatClimate(props);
-            const imageUrl = props.image_url;
+            const imageUrl = escapeAttribute(props.image_url);
+            const imageAlt = escapeAttribute(`Фото от ${date}`);
 
             // Строим HTML попапа
             const html = `
@@ -342,7 +348,17 @@
                     <div class="popup-drag-handle" title="Перетащить карточку">↕ Перетащить</div>
                     <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
                     <b>${date}</b><br>
-                    <img src="${imageUrl}" alt="Фото">
+                    <button
+                        type="button"
+                        class="popup-photo-open"
+                        data-lightbox-src="${imageUrl}"
+                        data-lightbox-alt="${imageAlt}"
+                        aria-label="Открыть фотографию на весь экран"
+                        title="Открыть фотографию на весь экран"
+                    >
+                        <img src="${imageUrl}" alt="${imageAlt}">
+                        <span class="popup-photo-zoom-icon" aria-hidden="true">⛶</span>
+                    </button>
                     ${weather}
                     ${climate}
                     <div class="place-info" id="place-${id}">Загрузка места...</div>
@@ -481,5 +497,6 @@
             }
         }
     </script>
+    <script src="{% static 'photos/js/image_lightbox.js' %}"></script>
 </body>
 </html>

@@ -376,3 +376,41 @@ class EditPhotoNextTests(TestCase):
             html=True,
         )
         self.assertContains(response, f'href="{next_url}"')
+
+
+class MapImageLightboxTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="sam", password="password")
+
+    def assert_lightbox_markup(self, response):
+        self.assertContains(response, "data-image-lightbox")
+        self.assertContains(response, "data-lightbox-image-target")
+        self.assertContains(response, 'role="dialog"')
+        self.assertContains(response, 'aria-modal="true"')
+        self.assertContains(response, "photos/js/image_lightbox.js")
+        self.assertContains(response, "data-lightbox-src")
+        self.assertContains(response, "popup-photo-open")
+
+    def test_private_map_contains_shared_lightbox_for_authenticated_user(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("photo_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "photos/photo_list.html")
+        self.assertTemplateUsed(response, "photos/includes/image_lightbox.html")
+        self.assert_lightbox_markup(response)
+        self.assertContains(response, 'class="popup-actions"')
+        self.assertContains(response, 'class="edit-btn"')
+        self.assertContains(response, 'class="delete-btn"')
+
+    def test_public_map_contains_shared_lightbox_without_authentication(self):
+        response = self.client.get(reverse("public_user_map", args=[self.user.username]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "photos/public_map.html")
+        self.assertTemplateUsed(response, "photos/includes/image_lightbox.html")
+        self.assert_lightbox_markup(response)
+        self.assertNotContains(response, 'class="popup-actions"')
+        self.assertNotContains(response, 'class="edit-btn"')
+        self.assertNotContains(response, 'class="delete-btn"')
