@@ -414,3 +414,102 @@ class MapImageLightboxTests(TestCase):
         self.assertNotContains(response, 'class="popup-actions"')
         self.assertNotContains(response, 'class="edit-btn"')
         self.assertNotContains(response, 'class="delete-btn"')
+
+
+class PublicMapPresentationTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="olga",
+            password="password",
+            first_name="Ольга",
+            last_name="Климова",
+        )
+        self.other_user = User.objects.create_user(
+            username="alex",
+            password="password",
+        )
+
+    def create_public_photo(self, filename="public.jpg"):
+        photo = Photo(
+            user=self.owner,
+            image=f"photos/tests/{filename}",
+            is_public=True,
+            file_size=18,
+            latitude=55.75,
+            longitude=37.62,
+        )
+        Photo.objects.bulk_create([photo])
+        return photo
+
+    def public_map(self):
+        return self.client.get(
+            reverse("public_user_map", args=[self.owner.username])
+        )
+
+    def test_public_map_is_available_anonymously_without_owner_links(self):
+        response = self.public_map()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Фотокарта @olga")
+        self.assertNotContains(response, "Вернуться к моим фото")
+        self.assertNotContains(response, "Перейти к моим фото")
+
+    def test_authenticated_owner_sees_owner_links(self):
+        self.client.force_login(self.owner)
+
+        response = self.public_map()
+
+        self.assertContains(response, "← Вернуться к моим фото")
+        self.assertContains(response, "Перейти к моим фото")
+        self.assertContains(response, reverse("user_photos"), count=2)
+
+    def test_authenticated_other_user_does_not_see_owner_links(self):
+        self.client.force_login(self.other_user)
+
+        response = self.public_map()
+
+        self.assertNotContains(response, "Вернуться к моим фото")
+        self.assertNotContains(response, "Перейти к моим фото")
+
+    def test_allowed_full_name_is_shown_with_username(self):
+        self.owner.profile.show_full_name_on_public_map = True
+        self.owner.profile.save(update_fields=["show_full_name_on_public_map"])
+
+        response = self.public_map()
+
+        self.assertContains(response, "Фотокарта Ольга Климова")
+        self.assertContains(response, "@olga")
+
+    def test_private_full_name_is_not_shown(self):
+        response = self.public_map()
+
+        self.assertNotContains(response, "Ольга Климова")
+        self.assertContains(response, "Фотокарта @olga")
+
+    def test_anonymous_empty_state_has_no_private_instructions(self):
+        response = self.public_map()
+
+        self.assertContains(
+            response,
+            "На этой карте пока нет публичных фотографий.",
+        )
+        self.assertNotContains(response, "разделе «Мои фото»")
+        self.assertNotContains(response, "Перейти к моим фото")
+
+    def test_owner_empty_state_has_private_instructions_and_link(self):
+        self.client.force_login(self.owner)
+
+        response = self.public_map()
+
+        self.assertContains(response, "разделе «Мои фото»")
+        self.assertContains(response, "Перейти к моим фото")
+
+    def test_single_photo_uses_singular_count_and_popup_has_no_private_actions(self):
+        self.create_public_photo()
+
+        response = self.public_map()
+
+        self.assertContains(response, "1 публичное фото")
+        self.assertNotContains(response, 'class="popup-actions"')
+        self.assertNotContains(response, 'class="edit-btn"')
+        self.assertNotContains(response, 'class="delete-btn"')

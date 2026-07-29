@@ -32,32 +32,45 @@
 
     <section class="public-panel" aria-label="Информация о публичной карте">
         <p class="brand">Weatherpins</p>
-        <h1 class="map-title">Публичная карта пользователя</h1>
         {% if show_public_user_full_name %}
-            <div class="public-user-name">{{ public_user_full_name }}</div>
-            <div class="public-user-username">@{{ public_user.username }}</div>
+            <h1 class="map-title">Фотокарта {{ public_user_full_name }}</h1>
+            <p class="public-map-meta">
+                @{{ public_user.username }} ·
+                {% if public_photo_count == 1 %}
+                    1 публичное фото
+                {% else %}
+                    {{ public_photo_count }} публичных фото
+                {% endif %}
+            </p>
         {% else %}
-            <div class="public-user-username">@{{ public_user.username }}</div>
+            <h1 class="map-title">Фотокарта @{{ public_user.username }}</h1>
+            <p class="public-map-meta">
+                {% if public_photo_count == 1 %}
+                    1 публичное фото
+                {% else %}
+                    {{ public_photo_count }} публичных фото
+                {% endif %}
+            </p>
         {% endif %}
-        <div class="map-count">Публичных фото: {{ public_photo_count }}</div>
-        {% if user.is_authenticated %}
-            {% if user == public_user %}
-                <a href="{% url 'user_photos' %}" class="panel-link">← Мои фото</a>
-            {% else %}
-                <a href="{% url 'photo_list' %}" class="panel-link">← На главную карту</a>
-            {% endif %}
-        {% else %}
-            <a href="{% url 'photo_list' %}" class="panel-link">← На главную карту</a>
+        <p class="public-map-description">Фотографии с погодой в момент съёмки</p>
+        {% if user.is_authenticated and user == public_user %}
+            <a href="{% url 'user_photos' %}" class="panel-link">
+                ← Вернуться к моим фото
+            </a>
         {% endif %}
     </section>
 
     {% if public_photo_count == 0 %}
-        <section class="empty-state public-map-empty" aria-live="polite">
-            <h2>У пользователя пока нет публичных фото</h2>
+        <section class="empty-state public-map-empty">
+            <h2>На этой карте пока нет публичных фотографий.</h2>
             {% if user.is_authenticated and user == public_user %}
-                <p>Отметьте фото как публичные в разделе «Мои фото», чтобы они появились здесь.</p>
-            {% else %}
-                <p>Когда пользователь откроет фото для публичного просмотра, они появятся на этой карте.</p>
+                <p>
+                    Отметьте фотографии как публичные в разделе «Мои фото»,
+                    чтобы они появились здесь.
+                </p>
+                <a href="{% url 'user_photos' %}" class="public-empty-link">
+                    Перейти к моим фото
+                </a>
             {% endif %}
         </section>
     {% endif %}
