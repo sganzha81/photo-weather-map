@@ -486,6 +486,115 @@ class PublicMapPresentationTests(TestCase):
         self.assertNotContains(response, "Ольга Климова")
         self.assertContains(response, "Фотокарта @olga")
 
+    def test_public_map_metadata_uses_username_and_canonical_url(self):
+        response = self.public_map()
+        public_map_url = response.context["public_map_url"]
+        expected_title = "@olga — фотокарта в Weatherpins"
+        expected_image_alt = "Фотокарта @olga в Weatherpins"
+
+        self.assertContains(
+            response,
+            f'<link rel="canonical" href="{public_map_url}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta property="og:url" content="{public_map_url}">',
+            html=True,
+        )
+        self.assertContains(response, '<meta property="og:locale" content="ru_RU">', html=True)
+        self.assertContains(response, f'<title>{expected_title}</title>', html=True)
+        self.assertContains(
+            response,
+            f'<meta property="og:title" content="{expected_title}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta name="twitter:title" content="{expected_title}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta property="og:image:alt" content="{expected_image_alt}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta name="twitter:image:alt" content="{expected_image_alt}">',
+            html=True,
+        )
+        self.assertTrue(
+            response.context["og_image_url"].endswith(
+                "/static/photos/brand/weatherpins-icon-512.png"
+            )
+        )
+        self.assertContains(
+            response,
+            f'<meta property="og:image" content="{response.context["og_image_url"]}">',
+            html=True,
+        )
+        self.assertNotContains(response, "Ольга Климова")
+
+    def test_public_map_metadata_uses_allowed_full_name(self):
+        self.owner.profile.show_full_name_on_public_map = True
+        self.owner.profile.save(update_fields=["show_full_name_on_public_map"])
+
+        response = self.public_map()
+        expected_title = "Ольга Климова — фотокарта в Weatherpins"
+        expected_image_alt = "Фотокарта Ольга Климова в Weatherpins"
+
+        self.assertContains(response, f'<title>{expected_title}</title>', html=True)
+        self.assertContains(
+            response,
+            f'<meta property="og:title" content="{expected_title}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta name="twitter:title" content="{expected_title}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta property="og:image:alt" content="{expected_image_alt}">',
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f'<meta name="twitter:image:alt" content="{expected_image_alt}">',
+            html=True,
+        )
+
+    def test_empty_map_uses_metadata_description_fallback(self):
+        response = self.public_map()
+
+        self.assertEqual(
+            response.context["og_description"],
+            "У пользователя пока нет публичных фото в Weatherpins.",
+        )
+
+    def test_single_photo_uses_singular_metadata_description(self):
+        self.create_public_photo()
+
+        response = self.public_map()
+
+        self.assertIn(
+            "1 публичное фото на карте",
+            response.context["og_description"],
+        )
+
+    def test_multiple_photos_use_plural_metadata_description(self):
+        self.create_public_photo("first.jpg")
+        self.create_public_photo("second.jpg")
+
+        response = self.public_map()
+
+        self.assertIn(
+            "2 публичных фото на карте",
+            response.context["og_description"],
+        )
+
     def test_anonymous_empty_state_has_no_private_instructions(self):
         response = self.public_map()
 

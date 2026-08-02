@@ -271,13 +271,24 @@ def public_user_map(request, username):
         longitude__isnull=False,
     ).count()
     public_map_url = request.build_absolute_uri(request.path)
-    og_title = f"Публичная карта @{public_user.username} в Weatherpins"
+    if show_public_user_full_name:
+        public_map_owner_name = public_user_full_name
+    else:
+        public_map_owner_name = f"@{public_user.username}"
+
+    og_title = f"{public_map_owner_name} — фотокарта в Weatherpins"
+    og_image_alt = f"Фотокарта {public_map_owner_name} в Weatherpins"
     if public_photo_count > 0:
+        if public_photo_count == 1:
+            public_photo_count_text = "1 публичное фото"
+        else:
+            public_photo_count_text = f"{public_photo_count} публичных фото"
         og_description = (
-            f"{public_photo_count} публичных фото на карте с погодой в момент "
+            f"{public_photo_count_text} на карте с погодой в момент "
             "съёмки и климатической нормой."
         )
     else:
+        public_photo_count_text = "0 публичных фото"
         og_description = "У пользователя пока нет публичных фото в Weatherpins."
     og_image_url = request.build_absolute_uri(
         static("photos/brand/weatherpins-icon-512.png")
@@ -291,10 +302,12 @@ def public_user_map(request, username):
             "public_user_full_name": public_user_full_name,
             "show_public_user_full_name": show_public_user_full_name,
             "public_photo_count": public_photo_count,
+            "public_photo_count_text": public_photo_count_text,
             "public_map_url": public_map_url,
             "og_title": og_title,
             "og_description": og_description,
             "og_image_url": og_image_url,
+            "og_image_alt": og_image_alt,
         },
     )
 
