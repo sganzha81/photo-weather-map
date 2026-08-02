@@ -153,42 +153,47 @@
             return value !== null && value !== undefined && value !== '';
         }
 
+        function formatPopupDate(value) {
+            return escapeHtml(value).replace(' ', ' <span aria-hidden="true">·</span> ');
+        }
+
         function formatWeather(props) {
+            if (!props.weather_source) return '';
             const emoji = props.weather_emoji || '🌡️';
             const label = props.weather_label || 'Нет данных';
             const cssClass = props.weather_css_class || 'unknown';
-            const lines = [
-                `<div><strong>${escapeHtml(emoji)} ${escapeHtml(label)}</strong></div>`
-            ];
+            let temperature = '';
+            const details = [];
+            let time = '';
 
             if (props.weather_source === 'hourly') {
                 if (isPresent(props.weather_temperature)) {
-                    lines.push(`<div>Температура: ${escapeHtml(props.weather_temperature)} °C</div>`);
+                    temperature = `${escapeHtml(props.weather_temperature)} °C`;
                 }
                 if (isPresent(props.weather_precipitation)) {
-                    lines.push(`<div>Осадки за час: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                    details.push(`<div>Осадки: ${escapeHtml(props.weather_precipitation)} мм</div>`);
                 }
                 if (isPresent(props.weather_time_display)) {
-                    lines.push(`<div>Данные за: ${escapeHtml(props.weather_time_display)}</div>`);
+                    time = `<div class="popup-weather-time">Данные за ${escapeHtml(props.weather_time_display)}</div>`;
                 }
             } else if (props.weather_source === 'daily') {
                 const hasMax = isPresent(props.weather_temperature_max);
                 const hasMin = isPresent(props.weather_temperature_min);
                 if (hasMax || hasMin) {
-                    lines.push(
-                        `<div>Температура: ${hasMax ? escapeHtml(props.weather_temperature_max) : '?'} / ${hasMin ? escapeHtml(props.weather_temperature_min) : '?'} °C</div>`
-                    );
+                    temperature = `${hasMax ? escapeHtml(props.weather_temperature_max) : '?'} / ${hasMin ? escapeHtml(props.weather_temperature_min) : '?'} °C`;
                 }
                 if (isPresent(props.weather_precipitation)) {
-                    lines.push(`<div>Осадки: ${escapeHtml(props.weather_precipitation)} мм</div>`);
+                    details.push(`<div>Осадки: ${escapeHtml(props.weather_precipitation)} мм</div>`);
                 }
             }
 
-            if (lines.length === 1 && label === 'Нет данных') {
-                return `<div class="weather-info weather-${escapeHtml(cssClass)}">Нет данных</div>`;
-            }
-
-            return `<div class="weather-info weather-${escapeHtml(cssClass)}">${lines.join('')}</div>`;
+            return `<div class="popup-weather weather-${escapeHtml(cssClass)}">
+                <div class="popup-weather-main">
+                    <span class="popup-weather-description">${escapeHtml(emoji)} ${escapeHtml(label)}</span>
+                    ${temperature ? `<span class="popup-weather-temperature">${temperature}</span>` : ''}
+                </div>
+                ${details.length || time ? `<div class="popup-weather-details">${details.join('')}${time}</div>` : ''}
+            </div>`;
         }
 
         function formatTemperature(value) {
@@ -205,17 +210,13 @@
                 return '';
             }
 
-            const lines = [
-                `<div>📊 ${escapeHtml(props.climate_comparison_text)}</div>`
-            ];
-
-            if (isPresent(props.climate_normal_temperature)) {
-                lines.push(
-                    `<div>Обычно: ${formatTemperature(props.climate_normal_temperature)} °C</div>`
-                );
-            }
-
-            return `<div class="climate-info">${lines.join('')}</div>`;
+            const normal = isPresent(props.climate_normal_temperature)
+                ? `<span class="popup-climate-normal">Обычно: ${formatTemperature(props.climate_normal_temperature)} °C</span>`
+                : '';
+            return `<div class="popup-climate">
+                <div class="popup-climate-title">📊 ${normal || 'Сравнение с нормой'}</div>
+                <div class="popup-climate-comparison">${escapeHtml(props.climate_comparison_text)}</div>
+            </div>`;
         }
 
         function closePopup() {
@@ -235,22 +236,26 @@
             const imageAlt = escapeAttribute(`Фото от ${props.date}`);
             const html = `
                 <div class="popup-card">
-                    <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
-                    <b>${escapeHtml(props.date)}</b><br>
-                    <button
-                        type="button"
-                        class="popup-photo-open"
-                        data-lightbox-src="${imageUrl}"
-                        data-lightbox-alt="${imageAlt}"
-                        aria-label="Открыть фотографию на весь экран"
-                        title="Открыть фотографию на весь экран"
-                    >
-                        <img src="${imageUrl}" alt="${imageAlt}">
-                        <span class="popup-photo-zoom-icon" aria-hidden="true">⛶</span>
-                    </button>
+                    <div class="popup-header">
+                        <button class="popup-close-btn" onclick="closePopup()" title="Закрыть">✕</button>
+                    </div>
+                    <div class="popup-photo-date">${formatPopupDate(props.date)}</div>
+                    <div class="popup-photo-wrapper">
+                        <button
+                            type="button"
+                            class="popup-photo-open"
+                            data-lightbox-src="${imageUrl}"
+                            data-lightbox-alt="${imageAlt}"
+                            aria-label="Открыть фотографию на весь экран"
+                            title="Открыть фотографию на весь экран"
+                        >
+                            <img class="popup-photo-image" src="${imageUrl}" alt="${imageAlt}">
+                            <span class="popup-photo-zoom-icon" aria-hidden="true">⛶</span>
+                        </button>
+                    </div>
+                    <div class="popup-location" id="place-${escapeAttribute(id)}" hidden></div>
                     ${formatWeather(props)}
                     ${formatClimate(props)}
-                    <div class="place-info" id="place-${escapeAttribute(id)}">Загрузка места...</div>
                 </div>
             `;
 
@@ -269,18 +274,21 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {
-                            placeSpan.textContent = 'Место не определено';
+                            placeSpan.hidden = true;
                         } else {
                             let shortName = data.name || data.display_name;
                             if (data.display_name && data.display_name.includes(',')) {
                                 shortName = data.display_name.split(',')[0].trim();
                             }
-                            placeSpan.textContent = '📍 ' + shortName;
-                            placeSpan.dataset.loaded = 'true';
+                            if (shortName) {
+                                placeSpan.textContent = '📍 ' + shortName;
+                                placeSpan.hidden = false;
+                                placeSpan.dataset.loaded = 'true';
+                            }
                         }
                     })
                     .catch(() => {
-                        placeSpan.textContent = 'Ошибка загрузки места';
+                        placeSpan.hidden = true;
                     });
             }
         }

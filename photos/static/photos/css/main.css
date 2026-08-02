@@ -1352,12 +1352,18 @@ input[type="file"] {
 
 .popup-card {
     position: relative;
-    min-width: 200px;
-    max-width: 250px;
-    padding: 16px;
-    border-radius: 12px;
+    width: min(330px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 100px);
+    max-height: calc(100dvh - 100px);
+    box-sizing: border-box;
+    padding: 14px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 15px;
     background: #ffffff;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.24);
     font-size: 14px;
     transform: translate(var(--drag-x, 0px), var(--drag-y, 0px));
     user-select: text;
@@ -1367,6 +1373,10 @@ input[type="file"] {
 .popup-card.is-dragging * {
     cursor: grabbing;
     user-select: none;
+}
+
+.popup-header {
+    min-height: 40px;
 }
 
 .popup-drag-handle {
@@ -1404,8 +1414,19 @@ input[type="file"] {
 }
 
 .map-page .popup-card {
-    width: min(280px, calc(100vw - 32px));
-    max-width: calc(100vw - 32px);
+    width: min(330px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+}
+
+.popup-photo-wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 96px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 11px;
+    background: #f1f3f5;
 }
 
 .popup-photo-open {
@@ -1413,7 +1434,7 @@ input[type="file"] {
     display: block;
     width: fit-content;
     max-width: 100%;
-    margin: 8px auto;
+    margin: 0 auto;
     padding: 0;
     border: 0;
     border-radius: 8px;
@@ -1425,6 +1446,15 @@ input[type="file"] {
 .popup-photo-open img,
 .map-page .popup-photo-open img {
     margin: 0;
+}
+
+.popup-photo-open .popup-photo-image,
+.map-page .popup-photo-open .popup-photo-image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: min(36vh, 300px);
+    object-fit: contain;
 }
 
 .popup-photo-open:focus-visible {
@@ -1540,44 +1570,97 @@ body.image-lightbox-open {
     pointer-events: auto;
 }
 
-.weather-info {
+.popup-photo-date {
+    margin: 2px 0 8px;
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.popup-location {
+    margin: 8px 0 0;
+    color: #4b5563;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.popup-weather {
     margin: 8px 0;
     padding: 8px;
     border-radius: 8px;
     background: #f5f7fa;
-    text-align: center;
+    color: #1f2937;
+    line-height: 1.35;
 }
 
-.climate-info {
+.popup-weather-main,
+.popup-climate-title {
+    font-weight: 700;
+}
+
+.popup-weather-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.popup-weather-description {
+    min-width: 0;
+}
+
+.popup-weather-temperature {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.popup-weather-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    margin-top: 3px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.popup-weather-time {
+    color: inherit;
+}
+
+.popup-weather-time:not(:first-child)::before {
+    content: "· ";
+}
+
+.popup-climate {
     margin: 8px 0;
     padding: 8px;
     border: 1px solid #bae6fd;
     border-radius: 8px;
     background: #f0f9ff;
     color: #0f172a;
-    text-align: center;
     line-height: 1.35;
 }
 
-.place-info {
-    margin: 4px 0 0;
-    color: #555555;
-    font-style: italic;
+.popup-climate-normal,
+.popup-climate-comparison {
+    margin-top: 3px;
 }
 
 .popup-close-btn {
     position: absolute;
     top: 8px;
     right: 10px;
-    width: 24px;
-    height: 24px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     border: 0;
     border-radius: 50%;
     background: #f0f0f0;
     color: #333333;
     font-size: 16px;
-    line-height: 24px;
+    line-height: 40px;
     text-align: center;
     cursor: pointer;
 }
@@ -1589,7 +1672,9 @@ body.image-lightbox-open {
 .popup-actions {
     display: flex;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
 }
 
 .popup-actions .edit-btn,
@@ -1744,6 +1829,22 @@ body.image-lightbox-open {
 }
 
 @media (max-width: 768px) {
+    .popup-card {
+        max-height: calc(100vh - 110px);
+        max-height: calc(100dvh - 110px);
+        padding: 12px;
+    }
+
+    .popup-photo-open .popup-photo-image,
+    .map-page .popup-photo-open .popup-photo-image {
+        max-height: min(32vh, 270px);
+    }
+
+    .popup-weather,
+    .popup-climate {
+        padding: 7px 8px;
+    }
+
     body:has(.mobile-bottom-nav) {
         padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
