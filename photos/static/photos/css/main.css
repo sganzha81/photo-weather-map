@@ -485,6 +485,7 @@ input[type="file"]:focus {
 }
 
 .back-link,
+.password-reset-link a,
 .login-link a,
 .register-link a {
     display: inline-block;
@@ -498,9 +499,23 @@ input[type="file"]:focus {
 }
 
 .back-link:hover,
+.password-reset-link a:hover,
 .login-link a:hover,
 .register-link a:hover {
     text-decoration: underline;
+}
+
+.password-reset-link {
+    margin: -6px 0 16px;
+    text-align: right;
+}
+
+.auth-copy {
+    margin: -8px 0 24px;
+    color: #475569;
+    font-size: 16px;
+    line-height: 1.5;
+    text-align: center;
 }
 
 .login-link,

@@ -2,7 +2,7 @@ import re
 
 from django import forms
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import UserProfile
 
@@ -23,7 +23,18 @@ def clean_url_safe_username(username):
     return username
 
 
+class NormalizedAuthenticationForm(AuthenticationForm):
+    def clean_username(self):
+        return self.cleaned_data["username"].strip().lower()
+
+
 class RegisterForm(UserCreationForm):
+    email = forms.EmailField(required=True, label="Email")
+
+    class Meta:
+        model = User
+        fields = ("username", "email", "password1", "password2")
+
     def clean_username(self):
         username = clean_url_safe_username(self.cleaned_data["username"])
 
@@ -31,6 +42,14 @@ class RegisterForm(UserCreationForm):
             raise forms.ValidationError("Пользователь с таким username уже существует.")
 
         return username
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Пользователь с таким email уже существует.")
+
+        return email
 
 
 class UserProfileForm(forms.ModelForm):
@@ -84,7 +103,7 @@ class UserProfileForm(forms.ModelForm):
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
 
-        users = User.objects.filter(email=email)
+        users = User.objects.filter(email__iexact=email)
         if self.instance.pk:
             users = users.exclude(pk=self.instance.pk)
 
