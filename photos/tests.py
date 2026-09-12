@@ -1,12 +1,18 @@
 from datetime import datetime
+from io import BytesIO
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.utils import timezone
 from django.urls import reverse
+from PIL import Image
 
-from .models import Photo
+from .models import Photo, SiteSettings
+from .views import validate_uploaded_photo
 
 
 class UserPhotosPublicFilterTests(TestCase):
@@ -622,3 +628,129 @@ class PublicMapPresentationTests(TestCase):
         self.assertNotContains(response, 'class="popup-actions"')
         self.assertNotContains(response, 'class="edit-btn"')
         self.assertNotContains(response, 'class="delete-btn"')
+
+
+class UploadPhotoTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="sam", password="password")
+        self.media_directory = TemporaryDirectory()
+        self.media_settings = override_settings(MEDIA_ROOT=self.media_directory.name)
+        self.media_settings.enable()
+        self.addCleanup(self.media_settings.disable)
+        self.addCleanup(self.media_directory.cleanup)
+
+    def make_jpeg(self, name, color="red"):
+        data = BytesIO()
+        Image.new("RGB", (20, 20), color=color).save(data, format="JPEG")
+        return SimpleUploadedFile(name, data.getvalue(), content_type="image/jpeg")
+
+    def make_large_jpeg(self, name):
+        data = BytesIO()
+        Image.effect_noise((1000, 1000), 100).save(data, format="JPEG", quality=90)
+        return SimpleUploadedFile(name, data.getvalue(), content_type="image/jpeg")
+
+    def upload(self, *files, follow=False):
+        return self.client.post(
+            reverse("upload_photo"),
+            {"image": list(files)},
+            follow=follow,
+        )
+
+    def test_upload_page_allows_selecting_multiple_files(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("upload_photo"))
+
+        self.assertContains(response, 'name="image"')
+        self.assertContains(response, "multiple")
+        self.assertContains(response, "Можно выбрать несколько фотографий одновременно.")
+
+    @patch("photos.views.Image.open")
+    def test_validation_accepts_mpo_jpeg_detected_by_pillow(self, image_open):
+        image_open.return_value.format = "MPO"
+        uploaded_file = SimpleUploadedFile(
+            "iphone.jpg", b"jpeg bytes", content_type="image/jpeg"
+        )
+
+        validate_uploaded_photo(uploaded_file)
+
+        image_open.return_value.verify.assert_called_once_with()
+
+    def test_single_file_upload_still_saves_photo_and_redirects_to_my_photos(self):
+        self.client.force_login(self.user)
+
+        response = self.upload(self.make_jpeg("single.jpg"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Photo.objects.filter(user=self.user).count(), 1)
+        self.assertContains(response, "Загружено 1 фото.")
+
+    def test_multiple_valid_files_are_saved_for_current_user(self):
+        self.client.force_login(self.user)
+
+        response = self.upload(
+            self.make_jpeg("first.jpg", "red"),
+            self.make_jpeg("second.jpg", "blue"),
+            follow=True,
+        )
+
+        photos = Photo.objects.filter(user=self.user)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(photos.count(), 2)
+        self.assertFalse(Photo.objects.exclude(user=self.user).exists())
+        self.assertContains(response, "Загружено 2 фото.")
+
+    def test_mixed_batch_keeps_valid_files_and_reports_corrupt_file(self):
+        self.client.force_login(self.user)
+        broken_file = SimpleUploadedFile(
+            "broken.jpg", b"this is not an image", content_type="image/jpeg"
+        )
+
+        response = self.upload(
+            self.make_jpeg("first.jpg", "red"),
+            self.make_jpeg("second.jpg", "blue"),
+            broken_file,
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Photo.objects.filter(user=self.user).count(), 2)
+        self.assertContains(response, "Загружено 2 фото.")
+        self.assertContains(response, "Не удалось обработать 1 фото.")
+        self.assertContains(response, "broken.jpg — Не удалось прочитать изображение.")
+
+    def test_photo_without_gps_or_taken_at_is_successful_upload(self):
+        self.client.force_login(self.user)
+
+        response = self.upload(self.make_jpeg("no-metadata.jpg"), follow=True)
+
+        photo = Photo.objects.get(user=self.user)
+        self.assertIsNone(photo.latitude)
+        self.assertIsNone(photo.longitude)
+        self.assertIsNone(photo.taken_at)
+        self.assertContains(response, "1 фото требуют указать место.")
+        self.assertContains(response, "1 фото без даты съёмки.")
+
+    def test_upload_requires_login(self):
+        response = self.upload(self.make_jpeg("anonymous.jpg"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("upload_photo"), response.url)
+        self.assertEqual(Photo.objects.count(), 0)
+
+    def test_batch_respects_remaining_storage_without_rolling_back_first_file(self):
+        SiteSettings.objects.create(user_storage_limit_mb=1)
+        first_file = self.make_large_jpeg("first.jpg")
+        second_file = self.make_large_jpeg("second.jpg")
+        self.assertGreater(first_file.size, 512 * 1024)
+        self.assertLess(first_file.size, 1024 * 1024)
+        self.assertGreater(second_file.size, 512 * 1024)
+        self.assertLess(second_file.size, 1024 * 1024)
+        self.client.force_login(self.user)
+
+        response = self.upload(first_file, second_file, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Photo.objects.filter(user=self.user).count(), 1)
+        self.assertContains(response, "Загружено 1 фото.")
+        self.assertContains(response, "second.jpg — Недостаточно места для загрузки.")

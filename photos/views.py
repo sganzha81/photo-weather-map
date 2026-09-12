@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import requests
+from PIL import Image, UnidentifiedImageError
 
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -23,6 +24,43 @@ from .models import Photo
 from .site_settings import get_user_storage_limit_bytes
 from .weather import fetch_weather_for_photo
 from .weather_codes import get_weather_info
+
+
+# Pillow reports some JPEGs with MPF metadata (including iPhone photos) as MPO.
+SUPPORTED_UPLOAD_FORMATS = {"JPEG", "MPO", "PNG", "HEIF", "HEIC"}
+
+
+def uploaded_filename(uploaded_file):
+    """Return a display-safe filename without a client-supplied path."""
+    return uploaded_file.name.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+
+
+def validate_uploaded_photo(uploaded_file):
+    """Check the actual image data before the Photo model processes it."""
+    try:
+        uploaded_file.seek(0)
+        image = Image.open(uploaded_file)
+        image.verify()
+        if image.format not in SUPPORTED_UPLOAD_FORMATS:
+            raise ValidationError("Поддерживаются файлы JPG, JPEG, PNG, HEIC и HEIF.")
+    except (
+        UnidentifiedImageError,
+        OSError,
+        SyntaxError,
+        ValueError,
+        Image.DecompressionBombError,
+    ) as error:
+        raise ValidationError("Не удалось прочитать изображение.") from error
+    finally:
+        uploaded_file.seek(0)
+
+
+def process_uploaded_photo(user, uploaded_file):
+    """Run the existing Photo save pipeline for one uploaded file."""
+    validate_uploaded_photo(uploaded_file)
+    photo = Photo(user=user, image=uploaded_file)
+    photo.save()
+    return photo
 
 
 def format_weather_time(weather_time):
@@ -85,51 +123,72 @@ def upload_photo(request):
             ]
             or 0
         )
-        upload_total = sum(
-            getattr(image_file, "size", 0) or 0 for image_file in image_files
-        )
         storage_limit = get_user_storage_limit_bytes()
-
-        if current_total + upload_total > storage_limit:
-            messages.error(
-                request,
-                (
-                    "Недостаточно места для загрузки. Сейчас занято "
-                    f"{format_file_size(current_total)} из {format_file_size(storage_limit)}. "
-                    f"Вы выбрали файлов на {format_file_size(upload_total)}."
-                ),
-            )
-            return render(request, "photos/upload.html")
-
         success_count = 0
-        has_errors = False
-        for image_file in image_files:
-            photo = Photo(image=image_file)
-            photo.user = request.user
-            try:
-                photo.save()
+        no_geo_count = 0
+        no_date_count = 0
+        errors = []
 
-                if photo.latitude is None or photo.longitude is None:
-                    messages.warning(
-                        request,
-                        f'{image_file.name} загружен, но не отображается на карте (нет геоданных).'
+        for image_file in image_files:
+            filename = uploaded_filename(image_file)
+            upload_size = getattr(image_file, "size", 0) or 0
+
+            # Check each file against the remaining space. Successful previous
+            # files reduce current_total, so a batch cannot overrun the limit.
+            if current_total + upload_size > storage_limit:
+                errors.append(
+                    (
+                        filename,
+                        (
+                            "Недостаточно места для загрузки. Сейчас занято "
+                            f"{format_file_size(current_total)} из "
+                            f"{format_file_size(storage_limit)}."
+                        ),
                     )
-                else:
-                    messages.success(request, f'{image_file.name} загружен.')
+                )
+                continue
+
+            try:
+                photo = process_uploaded_photo(request.user, image_file)
+                saved_size = photo.file_size or upload_size
+                if current_total + saved_size > storage_limit:
+                    # HEIC conversion can change the stored file size. Do not
+                    # retain a converted file that would exceed the limit.
+                    photo.delete()
+                    errors.append(
+                        (
+                            filename,
+                            "Недостаточно места для загрузки после обработки файла.",
+                        )
+                    )
+                    continue
 
                 success_count += 1
+                current_total += saved_size
+
+                if photo.latitude is None or photo.longitude is None:
+                    no_geo_count += 1
+                if photo.taken_at is None:
+                    no_date_count += 1
             except ValidationError as e:
-                for error in e.messages:
-                    messages.error(request, f'{image_file.name}: {error}')
+                errors.append((filename, " ".join(e.messages)))
 
         if success_count:
             messages.success(request, f"Загружено {success_count} фото.")
-        if has_errors:
-            # Если были ошибки, остаёмся на странице загрузки, чтобы пользователь увидел сообщения
-            return render(request, "photos/upload.html")
-        else:
-            # Всё хорошо — идём на карту
-            return redirect("photo_list")
+        if no_geo_count:
+            messages.warning(request, f"{no_geo_count} фото требуют указать место.")
+        if no_date_count:
+            messages.warning(request, f"{no_date_count} фото без даты съёмки.")
+        if errors:
+            messages.error(request, f"Не удалось обработать {len(errors)} фото.")
+        for filename, error in errors:
+            messages.error(request, f"{filename} — {error}")
+
+        # Keep a user who has nothing saved on the upload page, but show all
+        # successful (including mixed-result) batches in the management view.
+        if success_count:
+            return redirect("user_photos")
+        return render(request, "photos/upload.html")
 
     return render(request, "photos/upload.html")
 

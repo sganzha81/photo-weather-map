@@ -22,7 +22,7 @@
                 alt="Weatherpins"
                 class="brand-logo"
             >
-            <h1 class="form-title">Загрузить фото</h1>
+            <h1 class="form-title">Загрузить фотографии</h1>
 
             {% if messages %}
                 <ul class="messages">
@@ -42,6 +42,7 @@
             <div class="hint-panel">
                 <p><strong>Форматы:</strong> JPG, JPEG, PNG, HEIC, HEIF.</p>
                 <p><strong>Размер:</strong> максимум 10 МБ на файл.</p>
+                <p>Можно выбрать несколько фотографий одновременно.</p>
                 <p>Чтобы фото появилось на карте, в нём должны быть GPS-геометки.</p>
                 <p>Если геометок нет, место можно будет выбрать вручную в “Мои фото”.</p>
                 <p>Если погода не подтянулась сразу, её можно обновить позже в “Мои фото”.</p>
@@ -51,7 +52,7 @@
                 {% csrf_token %}
 
                 <div class="file-field">
-                    <label for="photo-files">Выберите фото</label>
+                    <label for="photo-files">Выберите фотографии</label>
                     <input
                         type="file"
                         id="photo-files"
